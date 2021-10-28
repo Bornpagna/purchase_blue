@@ -76,8 +76,12 @@ class UsageController extends Controller
 
     public function GetItem(Request $request)
     {
+		// print_r($request->q);
     	try {
-
+			$where = ['status'=>1];
+			if(!empty($request["cat_id"])){
+				$where = array_merge($where,['cat_id'=>$request["cat_id"]]);
+			}
 			$limit  = 10;
 			$page   = 1;
 			$offset = 0;
@@ -94,11 +98,15 @@ class UsageController extends Controller
 
     		$select = ['*',DB::raw("id as item_id"),DB::raw("CONCAT(code,' (',name,')')AS text")];
 
-			$OrderItem  = Item::select($select)->where('items.code','like',''.($request->q).'%')
-						->where('status',1)
-						->orWhere('items.name','like',''.($request->q).'%')
-						->where('status',1)
-						->offset($offset)
+			$OrderItem  = Item::select($select)
+						->where($where);
+			if($request->q){
+				$OrderItem = $OrderItem->where(function ($query) use ($request) {
+						$query->orWhere('items.name','like','%'.($request->q).'%')->orWhere('items.code','like','%'.($request->q).'%');
+				});
+			}
+			
+			$OrderItem = $OrderItem->offset($offset)
 					    ->limit($limit)
 					    ->paginate($limit);
 
@@ -157,6 +165,7 @@ class UsageController extends Controller
 				],
 			],
 			'rounte'		=> url("stock/use/dt"),
+			'rounteUpdateQty'	=> url('stock/use/updateQtyRemain'),
 		];
 		
 		if(hasRole('usage_entry_add')){
@@ -186,6 +195,7 @@ class UsageController extends Controller
 			],
 			'rounteSave'	=> url('stock/use/save'),
 			'rounteBack'	=> url('stock/use'),
+			
 			'pro_id'		=> $request->session()->get('project'),
 		];
 		return view('stock.usage.entry.add',$data);
@@ -302,28 +312,29 @@ class UsageController extends Controller
 	}
 
     public function save(Request $request){
+		
 		$rules = [
 			'reference_no' 	=>'required|max:20|unique_stock_use',
 			'trans_date' 	=>'required|max:20',
 			'reference' 	=>'required',
 			'engineer' 		=>'required|max:11',
 		];
-		if(getSetting()->usage_constructor==1){
-			$rules['sub_const']= 'required|max:11';
-		}
-		if(count($request['line_index']) > 0){
-			for($i=0;$i<count($request['line_index']);$i++){
-				$rules['line_index.'.$i] 			= 'required';
-				$rules['line_from_warehouse.'.$i] 	= 'required|max:11';
-				$rules['line_street.'.$i] 			= 'required|max:11';
-				$rules['line_on_house.'.$i] 		= 'required|max:11';
-				$rules['line_item.'.$i]				= 'required|max:11';
-				$rules['line_unit.'.$i]				= 'required';
-				$rules['line_use_qty.'.$i]			= 'required';
-				$rules['line_stock_qty.'.$i]		= 'required';
-				$rules['line_boq_set.'.$i]			= 'required';
-			}
-		}
+		// if(getSetting()->usage_constructor==1){
+		// 	$rules['sub_const']= 'required|max:11';
+		// }
+		// if(count($request['line_index']) > 0){
+		// 	for($i=0;$i<count($request['line_index']);$i++){
+		// 		$rules['line_index.'.$i] 			= 'required';
+		// 		$rules['line_from_warehouse.'.$i] 	= 'required|max:11';
+		// 		$rules['line_building.'.$i] 			= 'required|max:11';
+		// 		$rules['line_on_house.'.$i] 		= 'required|max:11';
+		// 		$rules['line_item.'.$i]				= 'required|max:11';
+		// 		$rules['line_unit.'.$i]				= 'required';
+		// 		$rules['line_use_qty.'.$i]			= 'required';
+		// 		$rules['line_stock_qty.'.$i]		= 'required';
+		// 		$rules['line_boq_set.'.$i]			= 'required';
+		// 	}
+		// }
         Validator::make($request->all(),$rules)->validate();
 		try {
 			DB::beginTransaction();
@@ -351,12 +362,16 @@ class UsageController extends Controller
 
 			if(count($request['line_index']) > 0){
 				for($i=0;$i<count($request['line_index']);$i++){
+					$house_info = DB::table('houses')->where('id',$request['line_on_house'][$i])->first();
 					$calQTY = $request['line_use_qty'][$i];
 					$detail = [
 						'use_id'         =>$id,
 						'warehouse_id'   =>$request['line_from_warehouse'][$i],
 						'house_id'       =>$request['line_on_house'][$i],
-						'street_id'      =>$request['line_street'][$i],
+						'zone_id'      	 =>$house_info->zone_id ? $house_info->zone_id : 0,
+						'block_id'       =>$house_info->block_id ?  $house_info->block_id : 0,
+						'building_id'    =>$request['line_building'][$i],
+						// 'street_id'      =>$request['line_street'][$i],
 						'line_no'        =>$request['line_index'][$i],
 						'item_id'        =>$request['line_item'][$i],
 						'unit'           =>$request['line_unit'][$i],
@@ -386,88 +401,217 @@ class UsageController extends Controller
 					];
 
 					if (getSetting()->is_costing==1) {
-						if (getSetting()->stock_account=="FIFO") {
-							$sql  = "CALL COSTING_FIFO({$request->session()->get('project')},{$request['line_item'][$i]});";
-						}else{
-							$sql  = "CALL COSTING_LIFO({$request->session()->get('project')},{$request['line_item'][$i]});";
-						}
-						$stocks = DB::select($sql);
-						if($stocks){
-							foreach($stocks as $stock){
-								$qty =0;
-								$remain_qty = 0;
-								if($calQTY > 0 && $stock->type_ == "ENT"){
-									if($stock->remain_qty >= $calQTY){
-										$remain_qty = $stock->remain_qty - $calQTY;
-										$qty 	= $calQTY * -1;
-										$cost 	= $stock->cost;
+						$calQTYRemain = $calQTY;
+						$costArr = getItemCost($request['line_item'][$i],$request['line_unit'][$i],$calQTY);
+						// print_r($costArr);exit;
+						if ($costArr) {
+							if (is_array($costArr) || is_object($costArr)) {
+								foreach ($costArr as $cArr) {
+									$qty =0;
+									$remain_qty = 0;
+									// print_r($cArr);
+									if($cArr['remain_qty'] >= $cArr['qty']){
+										$remain_qty = $cArr['remain_qty'] - $cArr['qty'];
+										$qty 	= $cArr['qty'] * -1;
+										$cost 	= $cArr['cost'];
 										$amount = $qty * $cost;
-										$stockOut = array_merge($stockOut,['qty'    => $qty]);
-										$stockOut = array_merge($stockOut,['cost'   => $cost]);
-										$stockOut = array_merge($stockOut,['amount' => $amount]);
-
-										$detail = array_merge($detail,['qty'    => $qty]);
-										$detail = array_merge($detail,['total_cost'    => $amount]);
-										$detail = array_merge($detail,['cost' => $cost]);
+										$originalAmount = $amount;
+										$orginalQty = ($cArr['qty']/$cArr['unit_qty']);
+										$originalCost = $originalAmount / ($orginalQty > 0 ? $orginalQty : 1);
 										
-										$calQTY = 0;
-									}else{
-										$remain_qty = 0;
-										$calQTYRemain = $calQTY - $stock->remain_qty; 
-
-										$qty 	= $stock->remain_qty * -1;
-										$cost 	= $stock->cost;
-										$amount = $qty * $cost;
+										$stockOut = array_merge($stockOut,['unit'=>$cArr['unit']]);
 										$stockOut = array_merge($stockOut,['qty'    => $qty]);
 										$stockOut = array_merge($stockOut,['cost'   => $cost]);
 										$stockOut = array_merge($stockOut,['amount' => $amount]);
 
-										$detail = array_merge($detail,['qty'    => $qty]);
-										$detail = array_merge($detail,['total_cost'    => $amount]);
-										$detail = array_merge($detail,['cost' => $cost]);
-										$calQTY = $calQTY - $stock->remain_qty;
+										$detail = array_merge($detail,['qty'    => $orginalQty]);
+										$detail = array_merge($detail,['total_cost'    => $originalAmount]);
+										$detail = array_merge($detail,['cost' => $originalCost]);
+										$detail = array_merge($detail,['qty_converted'=> $qty]);
+										$detail = array_merge($detail,['price_converted'=>$cost]);
+										$detail = array_merge($detail,['total_price_converted'=>$amount]);
+										$detail = array_merge($detail,['unit_converted'=>$cArr['unit']]);
+										$calQTY = $calQTY - ($cArr['remain_qty']/$cArr['unit_qty']);
+										$calQTYRemain = 0;
+									}else{
+										$qty = $cArr['remain_qty'] * -1;
+										$cost 	= $cArr['cost'];
+										$amount = $qty * $cost;
+										$originalAmount = $amount;
+										$orginalQty = $calQTY - ($cArr['remain_qty']/$cArr['unit_qty']);
+										$originalCost = $originalAmount / ($orginalQty > 0 ? $orginalQty : 1);
+										$stockOut = array_merge($stockOut,['unit'	=> $cArr['unit']]);
+										$stockOut = array_merge($stockOut,['qty'    => $qty]);
+										$stockOut = array_merge($stockOut,['cost'   => $cost]);
+										$stockOut = array_merge($stockOut,['amount' => $amount]);
+
+										$detail = array_merge($detail,['qty'    => $orginalQty]);
+										$detail = array_merge($detail,['total_cost'    => $originalAmount]);
+										$detail = array_merge($detail,['cost' => $originalCost]);
+										$detail = array_merge($detail,['qty_converted'=> $qty]);
+										$detail = array_merge($detail,['price_converted'=>$cost]);
+										$detail = array_merge($detail,['total_price_converted'=>$amount]);
+										$detail = array_merge($detail,['unit_converted'=>$cArr['unit']]);
+										$calQTY = $calQTY - ($cArr['remain_qty']/$cArr['unit_qty']);
+										$calQTYRemain = $calQTY;
+										$remain_qty = 0;
 									}
-									
 									if(!$stockOutId = DB::table('stocks')->insertGetId($stockOut)){
 										DB::rollback();
-										throw new \Exception("Stock Out[{$i}] not insert.");exit;
+										throw new \Exception("Stock Out[{$i}] not insert.");
 									}else{
-										Stock::where('id',$stock->stock_id)->update(['remain_qty'=>$remain_qty]);
+										Stock::where('id',$cArr['stock_id'])->update(['remain_qty'=>$remain_qty]);
 										if(!$usageDetailId = DB::table('usage_details')->insertGetId($detail)){
 											DB::rollback();
 											throw new \Exception("UsageDetail[{$i}] not insert.");
 										}
 									}
-
 								}
+									if($calQTY > 0){
+										$costArr = getItemCost($request['line_item'][$i],$request['line_unit'][$i],$calQTY);
+										foreach ($costArr as $cArr) {
+											$remain_qty = 0;
+											if($cArr['remain_qty'] >= $cArr['qty']){
+												$remain_qty = $cArr['remain_qty'] - $cArr['qty'];
+												$qty 	= $cArr['qty'] * -1;
+												$cost 	= $cArr['cost'];
+												$amount = $qty * $cost;
+												$originalAmount = $amount;
+												$orginalQty = ($cArr['qty']/$cArr['unit_qty']);
+												$originalCost = $originalAmount / ($orginalQty > 0 ? $orginalQty : 1);
+												
+												$stockOut = array_merge($stockOut,['unit'=>$cArr['unit']]);
+												$stockOut = array_merge($stockOut,['qty'    => $qty]);
+												$stockOut = array_merge($stockOut,['cost'   => $cost]);
+												$stockOut = array_merge($stockOut,['amount' => $amount]);
+
+												$detail = array_merge($detail,['qty'    => $orginalQty]);
+												$detail = array_merge($detail,['total_cost'    => $originalAmount]);
+												$detail = array_merge($detail,['cost' => $originalCost]);
+												$detail = array_merge($detail,['qty_converted'=> $qty]);
+												$detail = array_merge($detail,['price_converted'=>$cost]);
+												$detail = array_merge($detail,['total_price_converted'=>$amount]);
+												$detail = array_merge($detail,['unit_converted'=>$cArr['unit']]);
+												$calQTY = $calQTY - ($cArr['remain_qty']/$cArr['unit_qty']);
+												$calQTYRemain = 0;
+											}else{
+												$qty = $cArr['remain_qty'] * -1;
+												$cost 	= $cArr['cost'];
+												$amount = $qty * $cost;
+												$originalAmount = $amount;
+												$orginalQty = $calQTY - ($cArr['remain_qty']/$cArr['unit_qty']);
+												$originalCost = $originalAmount / ($orginalQty > 0 ? $orginalQty : 1);
+												$stockOut = array_merge($stockOut,['unit'=>$cArr['unit']]);
+												$stockOut = array_merge($stockOut,['qty'    => $qty]);
+												$stockOut = array_merge($stockOut,['cost'   => $cost]);
+												$stockOut = array_merge($stockOut,['amount' => $amount]);
+
+												$detail = array_merge($detail,['qty'    => $calQTY - ($cArr['remain_qty']/$cArr['unit_qty'])]);
+												$detail = array_merge($detail,['total_cost'    => $originalAmount]);
+												$detail = array_merge($detail,['cost' => $originalCost]);
+												$detail = array_merge($detail,['qty_converted'=> $qty]);
+												$detail = array_merge($detail,['price_converted'=>$cost]);
+												$detail = array_merge($detail,['total_price_converted'=>$amount]);
+												$detail = array_merge($detail,['unit_converted'=>$cArr['unit']]);
+												$calQTY = $calQTY - ($cArr['remain_qty']/$cArr['unit_qty']);
+												$calQTYRemain = $calQTY;
+												$remain_qty = 0;
+											}
+											if(!$stockOutId = DB::table('stocks')->insertGetId($stockOut)){
+												DB::rollback();
+												throw new \Exception("Stock Out[{$i}] not insert.");
+											}else{
+												Stock::where('id',$cArr['stock_id'])->update(['remain_qty'=>$remain_qty]);
+												if(!$usageDetailId = DB::table('usage_details')->insertGetId($detail)){
+													DB::rollback();
+													throw new \Exception("UsageDetail[{$i}] not insert.");
+												}
+											}
+										}
+									}
+
+									if($calQTY > 0){
+										$costArr = getItemCost($request['line_item'][$i],$request['line_unit'][$i],$calQTY);
+										foreach ($costArr as $cArr) {
+											$remain_qty = 0;
+											if($cArr['remain_qty'] >= $cArr['qty']){
+												$remain_qty = $cArr['qty'] - $cArr['qty'];
+												$qty 	= $cArr['qty'] * -1;
+												$cost 	= $cArr['cost'];
+												$amount = $qty * $cost;
+												$originalAmount = $amount;
+												$originalCost = $originalAmount / ($calQTY > 0 ? $calQTY : 1);
+												$orginalQty =($cArr['remain_qty']/$cArr['unit_qty']);
+												$stockOut = array_merge($stockOut,['unit'=>$cArr['unit']]);
+												$stockOut = array_merge($stockOut,['qty'    => $qty]);
+												$stockOut = array_merge($stockOut,['cost'   => $cost]);
+												$stockOut = array_merge($stockOut,['amount' => $amount]);
+
+												$detail = array_merge($detail,['qty'    => $orginalQty]);
+												$detail = array_merge($detail,['total_cost'    => $originalAmount]);
+												$detail = array_merge($detail,['cost' => $originalCost]);
+												$detail = array_merge($detail,['qty_converted'=> $qty]);
+												$detail = array_merge($detail,['price_converted'=>$cost]);
+												$detail = array_merge($detail,['total_price_converted'=>$amount]);
+												$detail = array_merge($detail,['unit_converted'=>$cArr['unit']]);
+												$calQTY = $calQTY - ($cArr['remain_qty']/$cArr['unit_qty']);
+												$calQTYRemain = 0;
+											}else{
+												$qty = $cArr['remain_qty'] * -1;
+												$cost 	= $cArr['cost'];
+												$amount = $qty * $cost;
+												$originalAmount = $amount;
+												$orginalQty = $calQTY - ($cArr['remain_qty']/$cArr['unit_qty']);
+												$originalCost = $originalAmount / ($orginalQty > 0 ? $orginalQty : 1);
+												$stockOut = array_merge($stockOut,['unit'=>$cArr['unit']]);
+												$stockOut = array_merge($stockOut,['qty'    => $qty]);
+												$stockOut = array_merge($stockOut,['cost'   => $cost]);
+												$stockOut = array_merge($stockOut,['amount' => $amount]);
+
+												$detail = array_merge($detail,['qty'    => $calQTY - ($cArr['remain_qty']/$cArr['unit_qty'])]);
+												$detail = array_merge($detail,['total_cost'    => $originalAmount]);
+												$detail = array_merge($detail,['cost' => $originalCost]);
+												$detail = array_merge($detail,['qty_converted'=> $qty]);
+												$detail = array_merge($detail,['price_converted'=>$cost]);
+												$detail = array_merge($detail,['total_price_converted'=>$amount]);
+												$detail = array_merge($detail,['unit_converted'=>$cArr['unit']]);
+												$calQTY = $calQTY - ($cArr['remain_qty']/$cArr['unit_qty']);
+												$calQTYRemain = $calQTY;
+												$remain_qty = 0;
+											}
+											if(!$stockOutId = DB::table('stocks')->insertGetId($stockOut)){
+												DB::rollback();
+												throw new \Exception("Stock Out[{$i}] not insert.");
+											}else{
+												Stock::where('id',$cArr['stock_id'])->update(['remain_qty'=>$remain_qty]);
+												if(!$usageDetailId = DB::table('usage_details')->insertGetId($detail)){
+													DB::rollback();
+													throw new \Exception("UsageDetail[{$i}] not insert.");
+												}
+											}
+										}
+									}
+								
 							}
-							
 						}
-						// $costArr = getItemCost($request['line_item'][$i],$request['line_unit'][$i],$request['line_use_qty'][$i]);
-						// if ($costArr) {
-						// 	if (is_array($costArr) || is_object($costArr)) {
-						// 		foreach ($costArr as $cArr) {
-									
-						// 			$qty 	= $cArr['qty'] * -1;
-						// 			$cost 	= $cArr['cost'];
-						// 			$amount = $qty * $cost;
-									
-						// 			$stockOut = array_merge($stockOut,['qty'  => $qty]);
-						// 			$stockOut = array_merge($stockOut,['cost' => $cost]);
-						// 			$stockOut = array_merge($stockOut,['amount' => $amount]);
-			
-						// 			if(!$stockOutId = DB::table('stocks')->insertGetId($stockOut)){
-						// 				DB::rollback();
-						// 				throw new \Exception("Stock Out[{$i}] not insert.");
-						// 			}
-						// 		}
-						// 	}
-						// }
+						
 					}else{
-						$stockOut = array_merge($stockOut,['qty'  => (floatval($request['line_use_qty'][$i])*(-1))]);
+						$item_cost = DB::table('items')->where('items.id',$request['item_id'][$i])->first();
+						$stockOut = array_merge($stockOut,['qty'  => ($calQTY * (-1))]);
 						if(!$stockOutId = DB::table('stocks')->insertGetId($stockOut)){
 							DB::rollback();
 							throw new \Exception("Stock Out[{$i}] not insert.");
+						}else{
+							$detail = array_merge($detail,['qty'    => $calQTY]);
+							$detail = array_merge($detail,['total_cost'    => $calQTY * $item_cost->cost_purch]);
+							$detail = array_merge($detail,['cost' => $item_cost->cost_purch]);
+							$detail = array_merge($detail,['qty_converted'=> $calQTY]);
+							$detail = array_merge($detail,['price_converted'=>$item_cost->cost_purch]);
+							$detail = array_merge($detail,['total_price_converted'=>$calQTY * $item_cost->cost_purch]);
+							if(!$usageDetailId = DB::table('usage_details')->insertGetId($detail)){
+								DB::rollback();
+								throw new \Exception("UsageDetail[{$i}] not insert.");
+							}
 						}
 					}
 
@@ -477,7 +621,7 @@ class UsageController extends Controller
 					// }
 				}
 			}
-			
+			// exit;
 			DB::commit();
 			if($request->btnSubmit==1){
 				return redirect('stock/use')->with('success',trans('lang.save_success'));
@@ -699,6 +843,7 @@ class UsageController extends Controller
 		if($request->ajax()){
 			$warehouse_id = $request['warehouse_id'];
 			$house_id = $request['house_id'];
+			$building_id = $request["building_id"];
 			$item_id = $request['item_id'];
 			$unit = $request['unit'];
 			$prefix = getSetting()->round_number;
@@ -707,6 +852,58 @@ class UsageController extends Controller
 			$stock_qty = 0;
 			$usage_qty = 0;
 			$return_qty = 0;
+			$remain_boq = 0;
+			
+			$originalDate = $request['trans_date'];
+			$trans_date = date("Y-m-d", strtotime($originalDate));
+			$sql = "SELECT ROUND((F.stock_qty / F.adj_qty), $prefix) AS stock_qty FROM (SELECT E.stock_qty, (SELECT pr_units.`factor` FROM pr_units WHERE pr_units.`from_code` = '$unit'AND pr_units.`to_code` = E.unit_stock) AS adj_qty FROM (SELECT D.item_id, D.unit_stock, SUM(D.stock_qty) AS stock_qty FROM (SELECT C.item_id, C.unit_stock, (C.qty * C.stock_qty) AS stock_qty FROM (SELECT B.*, (SELECT pr_units.`factor` FROM pr_units WHERE pr_units.`from_code` = B.unit AND pr_units.`to_code` = B.unit_stock) AS stock_qty FROM (SELECT A.*, (SELECT pr_items.`unit_stock` FROM pr_items WHERE pr_items.`id` = A.item_id) AS unit_stock FROM (SELECT pr_stocks.`item_id`, pr_stocks.`unit`, pr_stocks.`qty` FROM pr_stocks WHERE pr_stocks.`item_id` = $item_id AND pr_stocks.`warehouse_id` = $warehouse_id AND pr_stocks.`delete` = 0 AND pr_stocks.`trans_date` <= '$trans_date') AS A) AS B) AS C) AS D GROUP BY D.item_id) AS E) AS F ";
+			
+			$objStock = collect(DB::select($sql))->first();
+			// print_r($objStock);
+			if($objStock){
+				$stock_qty = floatval($objStock->stock_qty);
+			}
+			
+			if(BoqItem::join('boqs','boqs.id','boq_items.boq_id')->where(['boqs.building_id'=>$building_id,'boq_items.item_id'=>$item_id])->exists()){
+				$sql_boq = "SELECT (F.stock_qty / F.boq_qty) AS boq_qty FROM (SELECT E.stock_qty, (SELECT pr_units.`factor` FROM pr_units WHERE pr_units.`from_code` = '$unit'AND pr_units.`to_code` = E.unit_stock) AS boq_qty FROM (SELECT D.item_id, D.unit_stock, SUM(D.stock_qty) AS stock_qty FROM (SELECT C.item_id, C.unit_stock, (C.qty * C.stock_qty) AS stock_qty FROM (SELECT B.*, (SELECT pr_units.`factor` FROM pr_units WHERE pr_units.`from_code` = B.unit AND pr_units.`to_code` = B.unit_stock) AS stock_qty FROM (SELECT A.*, (SELECT pr_items.`unit_stock` FROM pr_items WHERE pr_items.`id` = A.item_id) AS unit_stock FROM (SELECT pr_boq_items.`id`, pr_boq_items.`item_id`, pr_boq_items.`unit`, (pr_boq_items.`qty_std` + pr_boq_items.`qty_add` ) AS qty FROM pr_boq_items JOIN pr_boqs on pr_boqs.id = pr_boq_items.boq_id WHERE pr_boqs.building_id = $building_id AND pr_boq_items.`item_id` = $item_id) AS A) AS B) AS C) AS D GROUP BY D.item_id, D.unit_stock) AS E) AS F";
+				$objBoq = collect(DB::select($sql_boq))->first();
+				if($objBoq){
+					$boq_qty = floatval($objBoq->boq_qty);
+					$remain_boq = floatval($objBoq->boq_qty);
+					$sql_use = "SELECT (F.stock_qty / F.use_qty) AS use_qty FROM (SELECT E.stock_qty, (SELECT pr_units.`factor` FROM pr_units WHERE pr_units.`from_code` = '$unit'AND pr_units.`to_code` = E.unit_stock) AS use_qty FROM (SELECT D.item_id, D.unit_stock, SUM(D.stock_qty) AS stock_qty FROM (SELECT C.item_id, C.unit_stock, (C.qty * C.stock_qty) AS stock_qty FROM (SELECT B.*, (SELECT pr_units.`factor` FROM pr_units WHERE pr_units.`from_code` = B.unit AND pr_units.`to_code` = B.unit_stock) AS stock_qty FROM (SELECT A.*, (SELECT pr_items.`unit_stock` FROM pr_items WHERE pr_items.id = A.item_id) AS unit_stock FROM (SELECT pr_usage_details.`id`, pr_usage_details.`item_id`, pr_usage_details.`unit`, pr_usage_details.`qty` FROM pr_usage_details WHERE pr_usage_details.`delete` = 0 AND pr_usage_details.`boq_set` != - 1 AND pr_usage_details.`building_id` = $building_id AND pr_usage_details.`item_id` = $item_id) AS A) AS B) AS C) AS D GROUP BY D.item_id, D.unit_stock) AS E) AS F";
+					$objUse = collect(DB::select($sql_use))->first();
+					if($objUse){
+						$usage_qty = $objUse->use_qty;
+						$boq_qty = floatval($boq_qty); 
+						$remain_boq = floatval($boq_qty) - floatval($usage_qty); 
+					}
+					
+					$sql_return = "SELECT (F.stock_qty / F.use_qty) AS return_qty FROM (SELECT E.stock_qty, (SELECT pr_units.`factor` FROM pr_units WHERE pr_units.`from_code` = '$unit'AND pr_units.`to_code` = E.unit_stock) AS use_qty FROM (SELECT D.item_id, D.unit_stock, SUM(D.stock_qty) AS stock_qty FROM (SELECT C.item_id, C.unit_stock, (C.qty * C.stock_qty) AS stock_qty FROM (SELECT B.*, (SELECT pr_units.`factor` FROM pr_units WHERE pr_units.`from_code` = B.unit AND pr_units.`to_code` = B.unit_stock) AS stock_qty FROM (SELECT A.*, (SELECT pr_items.`unit_stock` FROM pr_items WHERE pr_items.id = A.item_id) AS unit_stock FROM (SELECT pr_return_usage_details.`id`, pr_return_usage_details.`item_id`, pr_return_usage_details.`unit`, pr_return_usage_details.`qty` FROM pr_return_usage_details WHERE pr_return_usage_details.`delete` = 0 AND pr_return_usage_details.`boq_set` != - 1 AND pr_return_usage_details.`building_id` = $building_id AND pr_return_usage_details.`item_id` = $item_id) AS A) AS B) AS C) AS D GROUP BY D.item_id, D.unit_stock) AS E) AS F";
+					$objReturn = collect(DB::select($sql_return))->first();
+					if($objReturn){
+						$return_qty = $objReturn->return_qty;
+						$boq_qty = floatval($boq_qty) - floatval($return_qty);
+					}
+				}
+			}
+			return ['stock_qty'=>$stock_qty,'boq_set'=>$boq_qty,'remain_boq'=>$remain_boq,'usage_qty'=>$usage_qty];
+		}
+		return ['stock_qty'=>0,'boq_set'=>-1];
+	}
+
+	public function getItemStocks(Request $request){
+		if($request->ajax()){
+			$warehouse_id = $request['warehouse_id'];
+			$house_id = $request['house_id'];
+			$item_id = $request['item_id'];
+			$unit = $request['unit'];
+			$prefix = getSetting()->round_number;
+			
+			$boq_qty = -1;
+			$stock_qty = 0;
+			$usage_qty = 0;
+			$return_qty = 0;
+			$remain_boq = 0;
 			
 			$originalDate = $request['trans_date'];
 			$trans_date = date("Y-m-d", strtotime($originalDate));
@@ -715,31 +912,33 @@ class UsageController extends Controller
 			if($objStock){
 				$stock_qty = floatval($objStock->stock_qty);
 			}
-
 			if(BoqItem::where(['house_id'=>$house_id, 'item_id'=>$item_id])->exists()){
+				
 				$sql_boq = "SELECT (F.stock_qty / F.boq_qty) AS boq_qty FROM (SELECT E.stock_qty, (SELECT pr_units.`factor` FROM pr_units WHERE pr_units.`from_code` = '$unit'AND pr_units.`to_code` = E.unit_stock) AS boq_qty FROM (SELECT D.item_id, D.unit_stock, SUM(D.stock_qty) AS stock_qty FROM (SELECT C.item_id, C.unit_stock, (C.qty * C.stock_qty) AS stock_qty FROM (SELECT B.*, (SELECT pr_units.`factor` FROM pr_units WHERE pr_units.`from_code` = B.unit AND pr_units.`to_code` = B.unit_stock) AS stock_qty FROM (SELECT A.*, (SELECT pr_items.`unit_stock` FROM pr_items WHERE pr_items.`id` = A.item_id) AS unit_stock FROM (SELECT pr_boq_items.`id`, pr_boq_items.`item_id`, pr_boq_items.`unit`, (pr_boq_items.`qty_std` + pr_boq_items.`qty_add` ) AS qty FROM pr_boq_items WHERE pr_boq_items.`house_id` = $house_id AND pr_boq_items.`item_id` = $item_id) AS A) AS B) AS C) AS D GROUP BY D.item_id, D.unit_stock) AS E) AS F";
 				$objBoq = collect(DB::select($sql_boq))->first();
 				if($objBoq){
 					$boq_qty = floatval($objBoq->boq_qty);
-					
+					$remain_boq = floatval($boq_qty);
 					$sql_use = "SELECT (F.stock_qty / F.use_qty) AS use_qty FROM (SELECT E.stock_qty, (SELECT pr_units.`factor` FROM pr_units WHERE pr_units.`from_code` = '$unit'AND pr_units.`to_code` = E.unit_stock) AS use_qty FROM (SELECT D.item_id, D.unit_stock, SUM(D.stock_qty) AS stock_qty FROM (SELECT C.item_id, C.unit_stock, (C.qty * C.stock_qty) AS stock_qty FROM (SELECT B.*, (SELECT pr_units.`factor` FROM pr_units WHERE pr_units.`from_code` = B.unit AND pr_units.`to_code` = B.unit_stock) AS stock_qty FROM (SELECT A.*, (SELECT pr_items.`unit_stock` FROM pr_items WHERE pr_items.id = A.item_id) AS unit_stock FROM (SELECT pr_usage_details.`id`, pr_usage_details.`item_id`, pr_usage_details.`unit`, pr_usage_details.`qty` FROM pr_usage_details WHERE pr_usage_details.`delete` = 0 AND pr_usage_details.`boq_set` != - 1 AND pr_usage_details.`house_id` = $house_id AND pr_usage_details.`item_id` = $item_id) AS A) AS B) AS C) AS D GROUP BY D.item_id, D.unit_stock) AS E) AS F";
 					$objUse = collect(DB::select($sql_use))->first();
 					if($objUse){
 						$usage_qty = $objUse->use_qty;
-						$boq_qty = floatval($boq_qty) - floatval($usage_qty); 
+						$boq_qty = floatval($boq_qty) ; 
+						$remain_boq = floatval($boq_qty) - floatval(abs($usage_qty)); 
+						
 					}
-					
 					$sql_return = "SELECT (F.stock_qty / F.use_qty) AS return_qty FROM (SELECT E.stock_qty, (SELECT pr_units.`factor` FROM pr_units WHERE pr_units.`from_code` = '$unit'AND pr_units.`to_code` = E.unit_stock) AS use_qty FROM (SELECT D.item_id, D.unit_stock, SUM(D.stock_qty) AS stock_qty FROM (SELECT C.item_id, C.unit_stock, (C.qty * C.stock_qty) AS stock_qty FROM (SELECT B.*, (SELECT pr_units.`factor` FROM pr_units WHERE pr_units.`from_code` = B.unit AND pr_units.`to_code` = B.unit_stock) AS stock_qty FROM (SELECT A.*, (SELECT pr_items.`unit_stock` FROM pr_items WHERE pr_items.id = A.item_id) AS unit_stock FROM (SELECT pr_return_usage_details.`id`, pr_return_usage_details.`item_id`, pr_return_usage_details.`unit`, pr_return_usage_details.`qty` FROM pr_return_usage_details WHERE pr_return_usage_details.`delete` = 0 AND pr_return_usage_details.`boq_set` != - 1 AND pr_return_usage_details.`house_id` = $house_id AND pr_return_usage_details.`item_id` = $item_id) AS A) AS B) AS C) AS D GROUP BY D.item_id, D.unit_stock) AS E) AS F";
 					$objReturn = collect(DB::select($sql_return))->first();
 					if($objReturn){
 						$return_qty = $objReturn->return_qty;
-						$boq_qty = floatval($boq_qty) + floatval($return_qty);
+						$boq_qty = floatval($boq_qty) - floatval(abs($return_qty));
+						$remain_boq = floatval($boq_qty) - floatval(abs($usage_qty)); 
 					}
 				}
 			}
-			return ['stock_qty'=>$stock_qty,'boq_set'=>$boq_qty];
+			return ['stock_qty'=>$stock_qty,'boq_set'=>$boq_qty,'remain_boq'=>$remain_boq,"usage_qty"=>$usage_qty];
 		}
-		return ['stock_qty'=>0,'boq_set'=>-1];
+		return ['stock_qty'=>0,'boq_set'=>-1,'remain_boq'=>0];
 	}
 
 	public function downloadExcel(Request $request){
@@ -1019,5 +1218,155 @@ class UsageController extends Controller
 		];
 
 		return view('stock.usage.print')->with($data);
+	}
+
+	public function updateRemainQty(Request $request){
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
+		$usages = DB::table('usage_details')->where('usage_details.delete',0)->get();
+		if($usages){
+			foreach($usages as $key=>$usage){
+				$calQTY = $usage->qty;
+				echo "Before 1 :".$calQTY; 
+				echo "<br />";
+				if (getSetting()->is_costing==1) {
+					$calQTYRemain = $calQTY;
+					$costArr = getItemCost($usage->item_id,$usage->unit,$calQTY);
+					if ($costArr) {
+						if (is_array($costArr) || is_object($costArr)) {
+							foreach ($costArr as $cArr) {
+								print_r($cArr);
+								echo "<br />";
+								$qty =0;
+								$remain_qty = 0;
+								if($cArr['remain_qty'] >= $cArr['qty']){
+									$remain_qty = $cArr['remain_qty'] - $cArr['qty'];
+									$qty 	= $cArr['qty'] * -1;
+									$cost 	= $cArr['cost'];
+									$amount = $qty * $cost;
+									$originalAmount = $amount;
+									$orginalQty = ($cArr['qty']/$cArr['unit_qty']);
+									$originalCost = $originalAmount / ($orginalQty > 0 ? $orginalQty : 1);
+									$calQTY = $calQTY - ($cArr['remain_qty']/$cArr['unit_qty']);
+									$calQTYRemain = 0;
+								}else{
+									$qty = $cArr['remain_qty'] * -1;
+									$cost 	= $cArr['cost'];
+									$amount = $qty * $cost;
+									$originalAmount = $amount;
+									$orginalQty = $calQTY - ($cArr['remain_qty']/$cArr['unit_qty']);
+									$originalCost = $originalAmount / ($orginalQty > 0 ? $orginalQty : 1);
+									
+									$calQTY = $calQTY - ($cArr['remain_qty']/$cArr['unit_qty']);
+									$calQTYRemain = $calQTY;
+									$remain_qty = 0;
+								}
+								// if($cArr["stock_id"]>0){
+									$stockOutId = DB::table('stocks')->where('id', $cArr["stock_id"])->update(['remain_qty'=>$remain_qty]);
+									// if(!$stockOutId = DB::table('stocks')->where('id', $cArr["stock_id"])->update(['remain_qty'=>$remain_qty])){
+									// 	DB::rollback();
+									// 	throw new \Exception("Stock Out[{$key}] not insert.");
+									// }
+								// }
+								
+								echo "after 1 :".$calQTY;
+								echo "<br />";
+								echo "remain 1 :".$remain_qty;
+								echo "<br />";
+							}
+								if($calQTY > 0){
+									echo "Before 2 :".$calQTY; 
+									echo "<br />";
+									$costArr = getItemCost($usage->item_id,$usage->unit,$calQTY);
+									foreach ($costArr as $cArr) {
+										print_r($cArr);
+										echo "<br />";
+										$remain_qty = 0;
+										if($cArr['remain_qty'] >= $cArr['qty']){
+											$remain_qty = $cArr['remain_qty'] - $cArr['qty'];
+											$qty 	= $cArr['qty'] * -1;
+											$cost 	= $cArr['cost'];
+											$amount = $qty * $cost;
+											$originalAmount = $amount;
+											$orginalQty = ($cArr['qty']/$cArr['unit_qty']);
+											$originalCost = $originalAmount / ($orginalQty > 0 ? $orginalQty : 1);
+											
+											
+											$calQTY = $calQTY - ($cArr['remain_qty']/$cArr['unit_qty']);
+											$calQTYRemain = 0;
+										}else{
+											$qty = $cArr['remain_qty'] * -1;
+											$cost 	= $cArr['cost'];
+											$amount = $qty * $cost;
+											$originalAmount = $amount;
+											$orginalQty = $calQTY - ($cArr['remain_qty']/$cArr['unit_qty']);
+											$originalCost = $originalAmount / ($orginalQty > 0 ? $orginalQty : 1);
+											
+											$calQTY = $calQTY - ($cArr['remain_qty']/$cArr['unit_qty']);
+											$calQTYRemain = $calQTY;
+											$remain_qty = 0;
+										}
+										$stockOutId = DB::table('stocks')->where('id', $cArr["stock_id"])->update(['remain_qty'=>$remain_qty]);
+										// if(!$stockOutId = DB::table('stocks')->where('id', $cArr["stock_id"])->update(['remain_qty'=>$remain_qty])){
+										// 	DB::rollback();
+										// 	throw new \Exception("Stock Out[{$key}] not insert.");
+										// }
+										echo "After 2 :"; print_r($calQTY);
+										echo "<br />";
+										echo "remain 2 :".$remain_qty;
+										echo "<br />";
+									}
+								}
+
+								if($calQTY > 0){
+									$costArr = getItemCost($usage->item_id,$usage->unit,$calQTY);
+									echo "Before 3 :".$calQTY; 
+									echo "<br />";
+									foreach ($costArr as $cArr) {
+										print_r($cArr);
+										echo "<br />";
+										$remain_qty = 0;
+										if($cArr['remain_qty'] >= $cArr['qty']){
+											$remain_qty = $cArr['qty'] - $cArr['qty'];
+											$qty 	= $cArr['qty'] * -1;
+											$cost 	= $cArr['cost'];
+											$amount = $qty * $cost;
+											$originalAmount = $amount;
+											$originalCost = $originalAmount / ($calQTY > 0 ? $calQTY : 1);
+											$orginalQty =($cArr['remain_qty']/$cArr['unit_qty']);
+											
+											$calQTY = $calQTY - ($cArr['remain_qty']/$cArr['unit_qty']);
+											$calQTYRemain = 0;
+										}else{
+											$qty = $cArr['remain_qty'] * -1;
+											$cost 	= $cArr['cost'];
+											$amount = $qty * $cost;
+											$originalAmount = $amount;
+											$orginalQty = $calQTY - ($cArr['remain_qty']/$cArr['unit_qty']);
+											$originalCost = $originalAmount / ($orginalQty > 0 ? $orginalQty : 1);
+											
+											$calQTY = $calQTY - ($cArr['remain_qty']/$cArr['unit_qty']);
+											$calQTYRemain = $calQTY;
+											$remain_qty = 0;
+										}
+										$stockOutId = DB::table('stocks')->where('id', $cArr["stock_id"])->update(['remain_qty'=>$remain_qty]);
+										// if(!$stockOutId = DB::table('stocks')->where('id', $cArr["stock_id"])->update(['remain_qty'=>$remain_qty])){
+										// 	DB::rollback();
+										// 	throw new \Exception("Stock Out[{$key}] not insert.");
+										// }
+
+										echo "After 3:"; print_r($calQTY);
+										echo "<br />";
+										echo "remain 1 :".$remain_qty;
+										echo "<br />";
+									}
+								}
+							
+						}
+					}
+					
+				}
+			}
+		}
 	}
 }

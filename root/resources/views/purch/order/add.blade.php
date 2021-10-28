@@ -344,7 +344,7 @@
 
 	$('#save_close,#save_new').on('click',function(){
 		$(this).prop('disabled', true);
-		if(chkValid([".pr_no",".reference_no",".trans_date",".delivery_date",".delivery_address",".ordered_by",".supplier",".line_item",".line_unit",".line_qty",".line_price",".line_disc_perc",".line_disc_usd",".disc_perc",".disc_usd"])){
+		if(chkValid([".pr_no",".reference_no",".trans_date",".delivery_date",".delivery_address",".ordered_by",".supplier",".line_item",".line_unit",".line_qty",".line_price",".line_disc_perc",".line_disc_usd",".disc_perc",".disc_usd",".status"])){
 			if(isSave()){
 				if (chkDublicateRef(jsonRef, '#reference_no')) {
 					$("#btnSubmit").val($(this).val());
@@ -457,6 +457,8 @@
 		var qty = 0;
 		var price = 0;
 		var disc = 0;
+		var total_amout = 0;
+		var total_grand_total = 0;
 		
 		var qty_ = $(".line_qty_"+row).val();
 		var price_ = $(".line_price_"+row).val();
@@ -470,9 +472,10 @@
 		if(disc_ !='' && disc_!=null){
 			disc = parseFloat(disc_);
 		}
-		
-		$(".line_amount_"+row).val(parseFloat(qty) * parseFloat(price));
-		$(".line_grand_total_"+row).val((parseFloat(qty) * parseFloat(price)) - parseFloat(disc));
+		total_amout = parseFloat(qty) * parseFloat(price);
+		total_grand_total = (parseFloat(qty) * parseFloat(price)) - parseFloat(disc);
+		$(".line_amount_"+row).val(total_amout.toFixed(2));
+		$(".line_grand_total_"+row).val(total_grand_total.toFixed(2));
 		
 		calculateTotal();
 	}
@@ -491,7 +494,7 @@
 				sub_total = sub_total + parseFloat(sub_total_);
 			}
 		});
-		$(".sub_total").val(parseFloat(sub_total));
+		$(".sub_total").val(parseFloat(sub_total.toFixed(2)));
 		
 		calculateGrandTotal();
 	}
@@ -516,10 +519,10 @@
 				'	<input type="hidden" value="'+data.qty+'" class="line_qty_orig line_qty_orig_'+data.id+'"/>'+
 				'</td>'+
 				'<td>'+
-				'	<input type="number" value="'+data.price+'" length="50" step="any" class="form-control noscroll line_price line_price_'+data.id+'" onkeyup="calculateRecord('+data.id+')"  name="line_price[]"/>'+
+				'	<input type="number" value="'+(parseFloat(data.price)).toFixed(3)+'" length="50" step="any" class="form-control noscroll line_price line_price_'+data.id+'" onkeyup="calculateRecord('+data.id+')"  name="line_price[]"/>'+
 				'</td>'+
 				'<td>'+
-				'	<input type="text" readonly value="'+parseFloat(data.price) * parseFloat(data.qty)+'" class="form-control noscroll line_amount line_amount_'+data.id+'" name="line_amount[]"/>'+
+				'	<input type="text" readonly value="'+(parseFloat(data.price) * parseFloat(data.qty)).toFixed(2)+'" class="form-control noscroll line_amount line_amount_'+data.id+'" name="line_amount[]"/>'+
 				'</td>'+
 				'<td>'+
 				'	<input type="number" length="50" step="any" class="form-control noscroll line_disc_perc line_disc_perc_'+data.id+'" onkeyup="onDiscountPercentage(this, '+data.id+')" value="0" name="line_disc_perc[]"/>'+
@@ -528,7 +531,7 @@
 				'	<input type="number" length="50" step="any" class="form-control noscroll line_disc_usd line_disc_usd_'+data.id+'" onkeyup="onDiscountDollar(this, '+data.id+')" value="0" name="line_disc_usd[]"/>'+
 				'</td>'+
 				'<td>'+
-				'	<input type="text" readonly value="'+parseFloat(data.price) * parseFloat(data.qty)+'" class="form-control noscroll line_grend_total line_grand_total_'+data.id+'" name="line_grend_total[]"/>'+
+				'	<input type="text" readonly value="'+(parseFloat(data.price) * parseFloat(data.qty)).toFixed(2)+'" class="form-control noscroll line_grend_total line_grand_total_'+data.id+'" name="line_grend_total[]"/>'+
 				'</td>'+
 				'<td>'+
 				'	<input type="text" length="100" class="form-control line_reference line_reference_'+data.id+'" name="line_reference[]" placeholder="{{trans('lang.enter_text')}}"/>'+
@@ -661,8 +664,8 @@
 		var discount = $("#disc_usd").val();
 		var deposit = $("#deposit").val();
 		if (sub_total!='' && sub_total!=null && discount!='' && discount!=null && deposit!='' && deposit!=null && parseFloat(sub_total)!=0) {
-			$("#last_total").val(((parseFloat(sub_total) + parseFloat(fee_charge))  - parseFloat(discount))-parseFloat(deposit));
-			$("#grand_total").val((parseFloat(sub_total) + parseFloat(fee_charge))  - parseFloat(discount));
+			$("#last_total").val((((parseFloat(sub_total) + parseFloat(fee_charge))  - parseFloat(discount))-parseFloat(deposit)).toFixed(2));
+			$("#grand_total").val(((parseFloat(sub_total) + parseFloat(fee_charge))  - parseFloat(discount)).toFixed(2));
 		}
 	}
 
@@ -676,7 +679,7 @@
 				$("#disc_perc").attr('readonly', false);
 			}else{
 				disc = (parseFloat(val) * 100) / parseFloat(sub_total);
-				$("#disc_perc").val(disc);
+				$("#disc_perc").val(disc.toFixed(3));
 				$("#disc_perc").attr('readonly', true);
 			}
 			calculateGrandTotal();
@@ -693,7 +696,7 @@
 				$("#disc_usd").attr('readonly', false);
 			}else{
 				disc = (parseFloat(val) * parseFloat(sub_total)) / 100;
-				$("#disc_usd").val(disc);
+				$("#disc_usd").val(disc.toFixed(3));
 				$("#disc_usd").attr('readonly', true);
 			}
 			calculateGrandTotal();
@@ -761,13 +764,13 @@
 								initTable(row);
 								grand_total = grand_total + (parseFloat(row.price) * parseFloat(row.qty));
 							});
-							$(".sub_total").val(grand_total);
+							$(".sub_total").val(grand_total.toFixed(2));
 							$(".fee_charge").val(0);
 							$(".disc_perc").val(0);
 							$(".disc_usd").val(0);
 							$(".deposit").val(0);
-							$(".grand_total").val(grand_total);
-							$(".last_total").val(grand_total);
+							$(".grand_total").val(grand_total.toFixed(2));
+							$(".last_total").val(grand_total.toFixed(2));
 						}
 					},error:function(){
 						console.log('error get PR reference.');

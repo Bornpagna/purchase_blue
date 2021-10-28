@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class DropColumnsCodeHousesTable extends Migration
+class AddColumnToTableBoqItemDefault extends Migration
 {
     /**
      * Run the migrations.
@@ -13,8 +13,8 @@ class DropColumnsCodeHousesTable extends Migration
      */
     public function up()
     {
-        Schema::table('houses', function (Blueprint $table) {
-            $table->dropColumn('code');
+        Schema::table('boq_item_defualts', function (Blueprint $table) {
+            $table->integer('boq_house_id')->default(0);
         });
     }
 

@@ -1,5 +1,18 @@
 @extends('layouts.app')
-
+@section('stylesheet')
+	<style>
+		td.details-control {
+            background: url("{{url("assets/upload/temps/details_open.png")}}") no-repeat center center !important;
+            cursor: pointer !important;
+        }
+        tr.shown td.details-control {
+            background: url("{{url("assets/upload/temps/details_close.png")}}") no-repeat center center !important;
+        }
+		.item_table>tbody>tr>td:first {
+			border: 0 !important;
+		}
+	</style>
+@endsection
 @section('content')
 <div class="row">
 	<div class="col-md-12">
@@ -26,16 +39,17 @@
 						<button class="close" data-close="alert"></button><strong>{{trans('lang.error')}}!</strong> {{Session::get('error')}} 
 					</div>
 				<?php endif; ?>
-				<table class="table table-striped table-bordered table-hover dt-responsive" id="my-table">
+				<table class="table table-striped table-bordered table-hover" id="my-table">
 					<thead>
 						<tr>
-							<th style="width: 15%;">{{trans("lang.house_no")}}</th>
-							<th style="width: 15%;">{{trans("lang.item_code")}}</th>
+							<th style="width: 1%;" class="all"></th>
+							<th style="width: 15%;">{{trans("lang.working_type")}}</th>
+							{{-- <th style="width: 15%;">{{trans("lang.item_code")}}</th>
 							<th style="width: 30%;">{{trans("lang.item_name")}}</th>
 							<th style="width: 10%;">{{trans("lang.units")}}</th>
 							<th style="width: 10%;">{{trans("lang.qty_std")}}</th>
-							<th style="width: 10%;">{{trans("lang.qty_add")}}</th>
-							<th style="width: 10%;">{{trans("lang.action")}}</th>
+							<th style="width: 10%;">{{trans("lang.qty_add")}}</th> --}}
+							{{-- <th style="width: 10%;">{{trans("lang.action")}}</th> --}}
 						</tr>
 					</thead>
 					<tbody></tbody>
@@ -57,34 +71,137 @@
 	var jsonUnit = JSON.parse(convertQuot("{{\App\Model\Unit::where(['status'=>1])->get(['id','from_code','from_desc','to_code','to_desc'])}}"));
 	var jsonHouse = JSON.parse(convertQuot("{{\App\Model\House::where(['status'=>1])->get(['id','house_no','street_id'])}}"));
 		
+	// var my_table = $('#my-table').DataTable({
+	// 	"lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+	// 	processing: true,
+	// 	serverSide: true,
+	// 	ajax: '{{$rounte}}',
+	// 	columns: [
+	// 		{ data: 'house_no', name: 'house' },
+	// 		{ data: 'code', name: 'code' },
+	// 		{ data: 'name', name: 'name' },
+	// 		{ data: 'unit', name: 'unit' },
+	// 		{ data: 'qty_std', name: 'qty_std' },
+	// 		{ data: 'qty_add', name: 'qty_add' },
+	// 		{ data: 'action', name: 'action', class :'text-center', orderable: false, searchable: false}
+	// 	],'fnCreatedRow':function(nRow,aData,iDataIndex){
+	// 		if (objName) {
+	// 			var obj = {
+	// 				'id':aData['id'],
+	// 				'house_id':aData['house_id'],
+	// 				'item_id':aData['item_id'],
+	// 				'unit':aData['unit'],
+	// 				'qty_std':aData['qty_std'],
+	// 				'qty_add':aData['qty_add'],
+	// 			};
+	// 			objName.push(obj);
+	// 		}
+	// 	}
+	// });
+
 	var my_table = $('#my-table').DataTable({
 		"lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
 		processing: true,
 		serverSide: true,
 		ajax: '{{$rounte}}',
 		columns: [
-			{ data: 'house_no', name: 'house' },
-			{ data: 'code', name: 'code' },
-			{ data: 'name', name: 'name' },
-			{ data: 'unit', name: 'unit' },
-			{ data: 'qty_std', name: 'qty_std' },
-			{ data: 'qty_add', name: 'qty_add' },
-			{ data: 'action', name: 'action', class :'text-center', orderable: false, searchable: false}
-		],'fnCreatedRow':function(nRow,aData,iDataIndex){
-			if (objName) {
-				var obj = {
-					'id':aData['id'],
-					'house_id':aData['house_id'],
-					'item_id':aData['item_id'],
-					'unit':aData['unit'],
-					'qty_std':aData['qty_std'],
-					'qty_add':aData['qty_add'],
-				};
-				objName.push(obj);
-			}
+			{
+				className: 'details-control',
+				orderable: false,
+				searchable: false,
+				data: null,
+				defaultContent: ''
+			},
+			{ data: 'working_type_name', name: 'working_type_name' },
+			// { data: 'code', name: 'code' },
+			// { data: 'name', name: 'name' },
+			// { data: 'unit', name: 'unit' },
+			// { data: 'qty_std', name: 'qty_std' },
+			// { data: 'qty_add', name: 'qty_add' },
+			// { data: 'action', name: 'action', class :'text-center', orderable: false, searchable: false}
+		],order: [[1, 'desc']]
+		// ,'fnCreatedRow':function(nRow,aData,iDataIndex){
+		// 	if (objName) {
+		// 		var obj = {
+		// 			'id':aData['id'],
+		// 			'working_type_name':aData['working_type_name'],
+		// 			// 'item_id':aData['item_id'],
+		// 			// 'unit':aData['unit'],
+		// 			// 'qty_std':aData['qty_std'],
+		// 			// 'qty_add':aData['qty_add'],
+		// 		};
+		// 		objName.push(obj);
+		// 	}
+		// }
+	});
+	function format (d) {
+        var str = '';
+        str += '<table class="table table-striped details-table table-responsive"  id="sub-'+d.id+'">';
+            str += '<thead>';
+                str += '<tr>';
+					str += '<th style="width: 15%;">{{trans("lang.item_code")}}</th>';
+                    str += '<th style="width: 30%;">{{trans("lang.item_name")}}</th>';
+                    str += '<th style="width: 10%;">{{trans("lang.units")}}</th>';
+                    str += '<th style="width: 10%;">{{trans("lang.qty_std")}}</th>';
+                    str += '<th style="width: 10%;">{{trans("lang.qty_add")}}</th>';
+					str += '<th style="width: 10%;">{{trans("lang.cost")}}</th>';
+                    // str += '<th style="width: 10%;">{{trans("lang.action")}}</th>';
+                str += '</tr>';
+            str += '</thead>';
+        str +='</table>';
+        return str;
+    }
+	$('#my-table tbody').on('click', 'td.details-control', function () {
+		var tr = $(this).closest('tr');
+		var row = my_table.row(tr);
+		console.log(row.data());
+		var tableId = 'sub-' + row.data().id;
+		if(row.child.isShown()) {
+			row.child.hide();
+			tr.removeClass('shown');
+			objName = [];
+		}else{
+			row.child(format(row.data())).show();
+			initTable(tableId,row.data());
+			$('#' + tableId+'_wrapper').attr('style','width: 99%;');
+			tr.addClass('shown');
 		}
 	});
 	
+	function initTable(tableId, data) {
+		console.log(data);
+		$('#' + tableId).DataTable({
+			processing: true,
+			serverSide: true,
+			language: {"url": "{{url('assets/lang').'/'.config('app.locale').'.json'}}"},
+			paging:true,
+			filter:true,
+			info:true,
+			ajax: data.details_url,
+			columns: [
+				{ data: 'code', name: 'code' },
+				{ data: 'name', name: 'name' },
+				{ data: 'boq_unit', name: 'unit_usage' },
+				{ data: 'qty_std', name: 'qty_std' },
+				{ data: 'qty_add', name: 'qty_add' },
+				{ data: 'cost', name: 'cost' },
+				// { data: 'action', name: 'action', class :'text-center', orderable: false, searchable: false}
+			],'fnCreatedRow':function(nRow,aData,iDataIndex){
+				if (objName) {
+					var obj = {
+						'id':aData['id'],
+						'house_id':aData['house_id'],
+						'item_id':aData['item_id'],
+						'unit':aData['boq_unit'],
+						'qty_std':aData['qty_std'],
+						'qty_add':aData['qty_add'],
+						'cost':aData['cost'],
+					};
+					objName.push(obj);
+				}
+			}
+		});
+	}
 	$('#boq-street-edit').on('change', function(){
 		var street = $(this).val();
 		if(street!='' && street!=null && jsonHouse){

@@ -19,6 +19,7 @@ use App\Model\Unit;
 use App\User;
 use App\Model\Warehouse;
 use App\Model\Supplier;
+use Exception;
 
 class OrderController extends Controller
 {
@@ -94,7 +95,7 @@ class OrderController extends Controller
 		}
     }
 	
-    public function index(){
+    public function index(Request $request){
 		$data = [
 			'title'			=> trans('lang.order'),
 			'icon'			=> 'fa fa-shopping-cart',
@@ -109,12 +110,14 @@ class OrderController extends Controller
 						'caption' 	=> trans('lang.order'),
 				],
 			],			
-			'rounte'		=> url("purch/order/dt"),
+			'rounte'			=> url("purch/order/dt"),
+			'rounte_request'	=> url("purch/request/dt"),
+			'rounteOrder'		=>	url('purch/order/makeOrder/'.$request->id),
 		];
 		
-		// if(hasRole('purchase_order_add')){
+		if(hasRole('purchase_order_add')){
 			$data = array_merge($data, ['rounteAdd'=> url('purch/order/add')]);
-		// }
+		}
 		return view('purch.order.index',$data);
 	}
 	
@@ -141,7 +144,8 @@ class OrderController extends Controller
 			'rounteBack'	=> url('purch/order'),
 		];
 		if($cid){
-			$id = decrypt($cid);
+			// $id = decrypt($cid);
+			$id = $cid;
 			$head = Order::find($id);
 			$data = array_merge($data, ['head'=>$head]);
 			$body = OrderItem::where(['po_id'=>$id])->get();
@@ -181,6 +185,38 @@ class OrderController extends Controller
 			return redirect()->back();
 		}
 	}
+
+	public function makeOrder(Request $request, $id){
+		$id = $id;
+		$obj = Requests::find($id);
+		if($obj){
+			$data = [
+				'title'			=> trans('lang.order'),
+				'icon'			=> 'fa fa-edit',
+				'small_title'	=> trans('lang.edit'),
+				'background'	=> '',
+				'link'			=> [
+					'home'	=> [
+							'url' 		=> url('/'),
+							'caption' 	=> trans('lang.home'),
+					],
+					'index'	=> [
+							'url' 		=> url('purch/order'),
+							'caption' 	=> trans('lang.order'),
+					],
+					'edit'	=> [
+							'caption' 	=> trans('lang.edit'),
+					],
+				],
+				'rounteSave'	=> url('purch/order/save'),
+				'rounteBack'	=> url('purch/order'),
+				'obj'	=> $obj,
+			];
+			return view('purch.order.make_order',$data);
+		}else{
+			return redirect()->back();
+		}
+	}
 	
 	public function getDt(Request $order)
     {
@@ -193,14 +229,17 @@ class OrderController extends Controller
 			DB::raw("(SELECT {$prefix}requests.`ref_no` FROM {$prefix}requests WHERE {$prefix}requests.`id` = {$prefix}orders.pr_id) AS pr_no"),
 			DB::raw("(SELECT CONCAT({$prefix}warehouses.`address`, ' (',{$prefix}warehouses.`name`,')')AS `name` FROM {$prefix}warehouses WHERE {$prefix}warehouses.`id` = {$prefix}orders.delivery_address) AS warehouse"),
 			DB::raw("(SELECT CONCAT({$prefix}suppliers.`desc`,' (',`{$prefix}suppliers`.`name`,')') AS `name` FROM {$prefix}suppliers WHERE {$prefix}suppliers.`id` = {$prefix}orders.sup_id) AS supplier"),
-			DB::raw("(SELECT {$prefix}users.`name` FROM {$prefix}users WHERE {$prefix}users.`id` = {$prefix}orders.ordered_by)AS ordered_by"),
+			DB::raw("(SELECT {$prefix}users.`name` FROM {$prefix}users WHERE {$prefix}users.`id` = {$prefix}orders.ordered_by) AS ordered_by"),
+			DB::raw("(SELECT {$prefix}users.`name` FROM {$prefix}users WHERE {$prefix}users.`id` = {$prefix}orders.ordered_by) AS ordered_by"),
 		];
 		$orders  = Order::select($columns)->where('pro_id',$pro_id)->where('trans_status','>',0);
-
+		if($order->only_active){
+			$orders = $orders->where('is_closed',0);
+		}
 		if(!hasRole('admin')){
 			$orders = $orders->where('dep_id',$dep_id)->orWhere('created_by',$user_id);
 		}
-
+		
 		$orders = $orders->get();
 
 		return Datatables::of($orders)
@@ -231,7 +270,7 @@ class OrderController extends Controller
 					}
 				}
 			}
-			
+			// print_r(hasRole('purchase_order_close'));
 			if(!hasRole('purchase_order_edit')){
 				$actionEdit = "disabled";
 			}
@@ -272,7 +311,6 @@ class OrderController extends Controller
 			$btnCopy =  '<a '.$actionCopy.' title="'.trans('lang.clone').'" class="btn btn-xs btn-success copy-record" row_id="'.$row->id.'" row_rounte="'.$rounte_copy.'">'.
 						'	<i class="fa fa-clone"></i>'.
 						'</a>';
-			
 			if($row->trans_status==1){
 				return $btnPrint.$btnEdit.$btnDelete;
 			}else if($row->trans_status==2){
@@ -326,8 +364,9 @@ class OrderController extends Controller
 				$rules['line_grend_total.'.$i]	= 'required';
 			}
 		}
-		Validator::make($request->all(),$rules)->validate();
 		
+		// Validator::make($request->all(),$rules)->validate();
+		// exit;
 		try {
 			DB::beginTransaction();
 			$trans_date = date("Y-m-d", strtotime($request->trans_date));
@@ -348,7 +387,7 @@ class OrderController extends Controller
 				'fee_charge'		=>$request->fee_charge,
 				'deposit'			=>$request->deposit,
 				'ordered_by'		=>$request->ordered_by,
-				'trans_status'		=>$request->status,
+				'trans_status'		=>$request->status ? $request->status : 1,
 				'note'				=>trim($request->desc),
 				'term_pay'			=>trim($request->term_pay),
 				'created_by'		=>Auth::user()->id,
@@ -374,7 +413,8 @@ class OrderController extends Controller
 			if(!$id = DB::table('orders')->insertGetId($data)){
 				throw new \Exception("Order not insert");
 			}
-
+			// exit;
+			$is_remain_qty = 1;
 			if(count($request['line_index']) > 0){
 				for($i=0;$i<count($request['line_index']);$i++){
 					$details[] = [
@@ -420,8 +460,17 @@ class OrderController extends Controller
 					$new_qty = (floatval($stock_qty_po) / floatval($stock_qty_pr)) + floatval($pr_ordered_qty);
 					
 					DB::table('request_items')->where(['pr_id'=>$request->pr_no,'line_no'=>$request['line_index'][$i],'item_id'=>$request['line_item'][$i]])->update(['ordered_qty'=>$new_qty]);
+					$remainItem = RequestItem::where(['pr_id'=>$request->pr_no,'line_no'=>$request['line_index'][$i],'item_id'=>$request['line_item'][$i]])->first();
+					// print_r($remainItem->ordered_qty+$remainItem->closed_qty."-".$remainItem->qty."=".(($remainItem->ordered_qty + $remainItem->closed_qty) - $remainItem->qty."<br />"));
+					if((($remainItem->ordered_qty + $remainItem->closed_qty) - $remainItem->qty) <= 0){
+						$is_remain_qty = 0;
+					}
 				}
 			}
+			if($is_remain_qty == 0){
+				DB::table("requests")->where('id',$request->pr_no)->update(["is_ordered"=>1]);
+			}
+			
 			DB::table('order_items')->insert($details);
 			DB::commit();
 			if($request->btnSubmit==1){
@@ -481,7 +530,7 @@ class OrderController extends Controller
 				'deposit'			=>$request->deposit,
 				'grand_total'		=>$request->grand_total,
 				'ordered_by'		=>$request->ordered_by,
-				'trans_status'		=>$request->status,
+				'trans_status'		=>$request->status ? $request->status : 1,
 				'note'				=>trim($request->desc),
 				'term_pay'			=>trim($request->term_pay),
 				'updated_by'		=>Auth::user()->id,
@@ -563,7 +612,8 @@ class OrderController extends Controller
 				}
 			}
 			DB::commit();
-			return redirect()->back()->with('success',trans('lang.update_success'));
+			return redirect('purch/order')->with('success',trans('lang.save_success'));
+			// return redirect()->back()->with('success',trans('lang.update_success'));
 		} catch (\Exception $e) {
 			DB::rollback();
 			return redirect()->back()->with('error',trans('lang.update_error').' '.$e->getMessage().' '.$e->getLine());
@@ -624,10 +674,123 @@ class OrderController extends Controller
 		}
     }
 	
-	public function close($id)
+	public function close($id,$make_order=null)
     {
 		try {
+			
 			DB::beginTransaction();
+			$obj = Order::find($id);
+			$arrObj = OrderItem::where(['po_id'=>$id])->get();
+			if(count($arrObj) > 0){
+				
+				foreach($arrObj as $row){
+						
+					$unit_stock = '';
+					$objItem = Item::where(['id'=>$row['item_id']])->first();
+					if($objItem){
+						$unit_stock = $objItem->unit_stock;
+					}
+					
+					$pr_unit = "";
+					$pr_ordered_qty = 0;
+					$objPR = RequestItem::where(['pr_id'=>$obj->pr_id,'line_no'=>$row['line_no'],'item_id'=>$row['item_id']])->first();
+					if($objPR){
+						$pr_unit = $objPR->unit;
+						$pr_ordered_qty = $objPR->ordered_qty;
+					}
+					
+					$pr_stock_qty = 0;
+					$objUnit2 = Unit::where(['from_code'=>$pr_unit,'to_code'=>$unit_stock])->first();
+					if($objUnit2){
+						$pr_stock_qty = floatval($objUnit2->factor);
+					}
+					
+					$stock_qty_po = 0;
+					$objUnit3 = Unit::where(['from_code'=>$row['unit'],'to_code'=>$unit_stock])->first();
+					if($objUnit3){
+						$stock_qty_po = floatval($objUnit3->factor) * (floatval($row->qty) - floatval($row->deliv_qty));
+					}
+									
+					$new_qty = floatval($pr_ordered_qty) - (floatval($stock_qty_po) / floatval($pr_stock_qty));					
+					DB::table('request_items')->where(['pr_id'=>$obj->pr_id,'line_no'=>$row['line_no'],'item_id'=>$row['item_id']])->update(['ordered_qty'=>$new_qty]);
+				
+					DB::table('order_items')->where(['id'=>$row->id])->update(['closed_qty'=>(floatval($row->qty) - floatval($row->deliv_qty))]);
+				}
+				DB::table('orders')->where('orders.id',$id)->update(['is_closed'=>1]);
+			}
+			DB::commit();
+			if($make_order){
+				// return redirect()->route('order/addFromClose', ['id' => $id]);
+				return redirect('purch/order?id='.$obj->pr_id)->with('status', 'An activation link was send to your email address.');
+			}
+			return redirect()->back()->with('success',trans('lang.close_success'));
+		} catch (\Exception $e) {
+			DB::rollback();
+			return redirect()->back()->with('error',trans('lang.close_error').' '.$e->getMessage().' '.$e->getLine());
+		}
+    }
+	public function addFromClose($cid=NULL,$order_id=null){
+		$id = $cid;
+		$obj = Requests::find($id);
+		if($obj){
+			$data = [
+				'title'			=> trans('lang.order'),
+				'icon'			=> 'fa fa-edit',
+				'small_title'	=> trans('lang.edit'),
+				'background'	=> '',
+				'link'			=> [
+					'home'	=> [
+							'url' 		=> url('/'),
+							'caption' 	=> trans('lang.home'),
+					],
+					'index'	=> [
+							'url' 		=> url('purch/order'),
+							'caption' 	=> trans('lang.order'),
+					],
+					'edit'	=> [
+							'caption' 	=> trans('lang.edit'),
+					],
+				],
+				'rounteSave'	=> url('purch/order/saveCloseOrder/'.$id),
+				'rounteBack'	=> url('purch/order'),
+				'obj'	=> $obj,
+			];
+			return view('purch.order.make_order',$data);
+		}else{
+			return redirect()->back();
+		}
+	}
+
+	public function saveCloseOrder(Request $request,$id){
+		try{
+			DB::beginTransaction();
+			$rules = [
+				'reference_no' 		=>'required|max:20|unique_order',
+				'trans_date' 		=>'required|max:20',
+				'delivery_date'		=>'required|max:20',
+				'delivery_address'	=>'required|max:11',
+				'supplier'			=>'required|max:11',
+				'ordered_by'		=>'required|max:11',
+				'sub_total'			=>'required',
+				'disc_perc'			=>'required',
+				'disc_usd'			=>'required',
+				'grand_total'		=>'required',
+				'fee_charge'		=>'required',
+				'deposit'			=>'required',
+			];
+			if(count($request['line_index']) > 0){
+				for($i=0;$i<count($request['line_index']);$i++){
+					$rules['line_index.'.$i]		= 'required';
+					$rules['line_item.'.$i]			= 'required|max:11';
+					$rules['line_unit.'.$i]			= 'required';
+					$rules['line_qty.'.$i]			= 'required';
+					$rules['line_price.'.$i]		= 'required';
+					$rules['line_amount.'.$i]		= 'required';
+					$rules['line_disc_perc.'.$i]	= 'required';
+					$rules['line_disc_usd.'.$i]		= 'required';
+					$rules['line_grend_total.'.$i]	= 'required';
+				}
+			}
 			$obj = Order::find($id);
 			$arrObj = OrderItem::where(['po_id'=>$id])->get();
 			if(count($arrObj) > 0){
@@ -665,13 +828,116 @@ class OrderController extends Controller
 					DB::table('order_items')->where(['id'=>$row->id])->update(['closed_qty'=>(floatval($row->qty) - floatval($row->deliv_qty))]);
 				}
 			}
+			$trans_date = date("Y-m-d", strtotime($request->trans_date));
+			$delivery_date = date("Y-m-d", strtotime($request->delivery_date));
+			$data = [
+				'pro_id'			=>$request->session()->get('project'),
+				'pr_id'				=>$request->pr_no,
+				'dep_id'			=>Auth::user()->dep_id,
+				'sup_id'			=>$request->supplier,
+				'ref_no'			=>$request->reference_no,
+				'trans_date'		=>$trans_date,
+				'delivery_address'	=>$request->delivery_address,
+				'delivery_date'		=>$delivery_date,
+				'sub_total'			=>$request->sub_total,
+				'disc_perc'			=>$request->disc_perc,
+				'disc_usd'			=>$request->disc_usd,
+				'grand_total'		=>$request->grand_total,
+				'fee_charge'		=>$request->fee_charge,
+				'deposit'			=>$request->deposit,
+				'ordered_by'		=>$request->ordered_by,
+				'trans_status'		=>$request->status ? $request->status : 1,
+				'note'				=>trim($request->desc),
+				'term_pay'			=>trim($request->term_pay),
+				'created_by'		=>Auth::user()->id,
+				'created_at'		=>date('Y-m-d H:i:s'),
+				'updated_by'		=>Auth::user()->id,
+				'updated_at'		=>date('Y-m-d H:i:s'),
+			];
+
+			if(Auth::user()->dep_id == 0){
+				if(!empty($request->ordered_by)){
+					if($orderedBy = User::find($request->ordered_by)){
+						$data = array_merge($data,['dep_id' => $orderedBy->dep_id]);
+					}
+				}else{
+					if(!empty($request->pr_no)){
+						if($purchaseRequest = Requests::find($request->pr_no)){
+							$data = array_merge($data,['dep_id' => $purchaseRequest->dep_id]);
+						}
+					}
+				}
+			}
+			if(!$id = DB::table('orders')->insertGetId($data)){
+				throw new \Exception("Order not insert");
+			}
+			// exit;
+			$is_remain_qty = 1;
+			if(count($request['line_index']) > 0){
+				for($i=0;$i<count($request['line_index']);$i++){
+					$details[] = [
+						'po_id'			=>$id,
+						'line_no'		=>$request['line_index'][$i],
+						'item_id'		=>$request['line_item'][$i],
+						'unit'			=>$request['line_unit'][$i],
+						'qty'			=>$request['line_qty'][$i],
+						'price'			=>$request['line_price'][$i],
+						'amount'		=>$request['line_amount'][$i],
+						'disc_perc'		=>$request['line_disc_perc'][$i],
+						'disc_usd'		=>$request['line_disc_usd'][$i],
+						'total'			=>$request['line_grend_total'][$i],
+						'desc'			=>$request['line_reference'][$i],
+					];
+					
+					$unit_stock = '';
+					$objItem = Item::where(['id'=>$request['line_item'][$i]])->first();
+					if($objItem){
+						$unit_stock = $objItem->unit_stock;
+					}
+					
+					$pr_unit = "";
+					$pr_ordered_qty = 0;
+					$obj = RequestItem::where(['pr_id'=>$request->pr_no,'line_no'=>$request['line_index'][$i],'item_id'=>$request['line_item'][$i]])->first();
+					if($obj){
+						$pr_unit = $obj->unit;
+						$pr_ordered_qty = $obj->ordered_qty;
+					}
+					
+					$stock_qty_pr = 0;
+					$objUnit1 = Unit::where(['from_code'=>$pr_unit,'to_code'=>$unit_stock])->first();
+					if($objUnit1){
+						$stock_qty_pr = $objUnit1->factor;
+					}
+					
+					$stock_qty_po = 0;
+					$objUnit2 = Unit::where(['from_code'=>$request['line_unit'][$i],'to_code'=>$unit_stock])->first();
+					if($objUnit2){
+						$stock_qty_po = floatval($objUnit2->factor) * floatval($request['line_qty'][$i]);
+					}
+					
+					$new_qty = (floatval($stock_qty_po) / floatval($stock_qty_pr)) + floatval($pr_ordered_qty);
+					DB::table('request_items')->where(['pr_id'=>$request->pr_no,'line_no'=>$request['line_index'][$i],'item_id'=>$request['line_item'][$i]])->update(['ordered_qty'=>$new_qty]);
+					$remainItem = RequestItem::where(['pr_id'=>$request->pr_no,'line_no'=>$request['line_index'][$i],'item_id'=>$request['line_item'][$i]])->first();
+					// print_r($remainItem->ordered_qty+$remainItem->closed_qty."-".$remainItem->qty."=".(($remainItem->ordered_qty + $remainItem->closed_qty) - $remainItem->qty."<br />"));
+					if((($remainItem->ordered_qty + $remainItem->closed_qty) - $remainItem->qty) <= 0){
+						$is_remain_qty = 0;
+					}
+				}
+			}
+			if($is_remain_qty == 0){
+				DB::table("requests")->where('id',$request->pr_no)->update(["is_ordered"=>1]);
+			}
+			DB::table('order_items')->insert($details);
 			DB::commit();
-			return redirect()->back()->with('success',trans('lang.close_success'));
-		} catch (\Exception $e) {
+			if($request->btnSubmit==1){
+				return redirect('purch/order')->with('success',trans('lang.save_success'));
+			}
+			return redirect()->back()->with('success',trans('lang.save_success'));
+			
+		}catch(Exception $e){
 			DB::rollback();
-			return redirect()->back()->with('error',trans('lang.close_error').' '.$e->getMessage().' '.$e->getLine());
 		}
-    }
+	}
 	
 	public function getStepApprove(Request $request ,$id){
 		$pro_id = $request->session()->get('project');

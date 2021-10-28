@@ -87,7 +87,7 @@
 									<div class="col-md-8">
 										@if(hasRole('building_add'))
 											<div class="input-group">
-												<select name="building_id" id="street" class="form-control street my-select2">
+												<select name="building_id" id="building_id" class="form-control building my-select2">
 													<option value=""></option>
 													{{getSystemData('BD')}}
 												</select>
@@ -96,7 +96,7 @@
 												</span>
 											</div>
 										@else
-											<select name="building_id" id="street" class="form-control street my-select2">
+											<select name="building_id" id="building_id" class="form-control building my-select2">
 												<option value=""></option>
 												{{getSystemData('BD')}}
 											</select>

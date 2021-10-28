@@ -192,18 +192,18 @@
 			var stock_qty = $(this).next().next().val();
 			var qty_ = $(this).next().val();
 			var qty = $(this).val();
-			if(parseFloat(qty) > parseFloat(qty_)){
-				isValid = false;
-				$(this).css('border','1px solid #e43a45');
-				$(".show-message-error").html('{{trans("lang.return_qty_can_not_greater_then_delivery_qty")}}!');
-			}else if(parseFloat(qty) > parseFloat(stock_qty)) {
-				isValid = false;
-				$(this).css('border','1px solid #e43a45');
-				$(".show-message-error").html('{{trans("lang.return_qty_can_not_greater_then_stock_qty")}}!');
-			}else{
-				$(this).css('border','1px solid #c2cad8');
-				$(".show-message-error").empty();
-			}
+			// if(parseFloat(qty) > parseFloat(qty_)){
+			// 	isValid = false;
+			// 	$(this).css('border','1px solid #e43a45');
+			// 	$(".show-message-error").html('{{trans("lang.return_qty_can_not_greater_then_delivery_qty")}}!');
+			// }else if(parseFloat(qty) > parseFloat(stock_qty)) {
+			// 	isValid = false;
+			// 	$(this).css('border','1px solid #e43a45');
+			// 	$(".show-message-error").html('{{trans("lang.return_qty_can_not_greater_then_stock_qty")}}!');
+			// }else{
+			// 	$(this).css('border','1px solid #c2cad8');
+			// 	$(".show-message-error").empty();
+			// }
 		});
 		return isValid;
 	}
@@ -286,14 +286,16 @@
 		var qty_ = $(".line_qty_orig_"+row).val();
 		var stock_qty = $(".line_qty_stock_"+row).val();
 		var qty = $(field).val();
+		
 		if(qty!=null && qty!=''){
 			if(parseFloat(qty) > parseFloat(qty_)){
+				
 				$(field).css('border','1px solid #e43a45');
-				$(".show-message-error").html('{{trans("lang.return_qty_can_not_greater_then_delivery_qty")}}!');
+				$(".show-message-error").html('{{trans("lang.return_qty_can_not_greater_then_stock_qty")}}!');
 			}else if(parseFloat(qty) > parseFloat(stock_qty)) {
 				isValid = false;
 				$(this).css('border','1px solid #e43a45');
-				$(".show-message-error").html('{{trans("lang.return_qty_can_not_greater_then_stock_qty")}}!');
+				$(".show-message-error").html('{{trans("lang.return_qty_can_not_greater_then_delivery_qty")}}!');
 			}else{
 				$(field).css('border','1px solid #c2cad8');
 				$(".show-message-error").empty();

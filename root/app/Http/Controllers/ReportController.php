@@ -243,6 +243,8 @@ class ReportController extends Controller
     }
 
     public function delivery_details_get_date(Request $request){
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
     	$start_date = $request->start_date;
 		$end_date = $request->end_date;
 		$project_id   = $request->session()->get('project');
@@ -597,6 +599,8 @@ class ReportController extends Controller
     }
 
     public function stock_balance_get_date(Request $request){
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
     	$start_date = $request->start_date;
 		$end_date = $request->end_date; 
 		$project_id   = $request->session()->get('project');
@@ -769,6 +773,8 @@ class ReportController extends Controller
     }
 
     function  purchase_items_get_date(Request $request){
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
     	$start_date = $request->start_date;
 		$end_date = $request->end_date;
 		$project_id   = $request->session()->get('project');
@@ -974,6 +980,8 @@ class ReportController extends Controller
     }
 
     function  stock_details_get_date(Request $request){
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
     	$start_date = $request->start_date;
 		$end_date = $request->end_date;
 		$project_id   = $request->session()->get('project');
@@ -1241,6 +1249,8 @@ class ReportController extends Controller
 
     public function print_request(Request $request,$id)
     {
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
     	$id = decrypt($id);
 		$prefix = DB::getTablePrefix();
     	$request_obj = PurchaseRequest::select(['*',
@@ -1303,6 +1313,8 @@ class ReportController extends Controller
 
     public function print_order(Request $request,$id)
     {
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
     	$id = decrypt($id);
 		$prefix = DB::getTablePrefix();
     	$order = Order::select(['*',
@@ -1410,6 +1422,8 @@ class ReportController extends Controller
 
     public function report_purchase_request_detail(Request $request)
     {
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
     	try {
     		$start_date   = $request->query("start_date");
 			$end_date     = $request->query("end_date");
@@ -1591,6 +1605,8 @@ class ReportController extends Controller
 
     public function report_purchase_and_order(Request $request)
     {
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
     	try {
     		$start_date   = $request->query("start_date");
 			$end_date     = $request->query("end_date");
@@ -1802,6 +1818,7 @@ class ReportController extends Controller
 
 	public function printUsageCosting(Request $request){
 		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$start_date   = $request->query("start_date");
 		$end_date     = $request->query("end_date");
 		$project_id   = $request->session()->get('project');
@@ -1903,6 +1920,8 @@ class ReportController extends Controller
 
     public function report_purchase_and_order_delivery(Request $request)
     {
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
     	try {
     		$start_date   = $request->query("start_date");
 			$end_date     = $request->query("end_date");
@@ -2060,6 +2079,8 @@ class ReportController extends Controller
 
     public function generate_requests(Request $request)
     {
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$start_date   = $request->query("start_date");
 		$end_date     = $request->query("end_date");
 		$project_id   = $request->session()->get('project');
@@ -2209,6 +2230,8 @@ class ReportController extends Controller
 
     public function generate_request_1(Request $request)
     {
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$start_date   = $request->query("start_date");
 		$end_date     = $request->query("end_date");
 		$project_id   = $request->session()->get('project');
@@ -2358,6 +2381,8 @@ class ReportController extends Controller
 
     public function generate_request_2(Request $request)
     {
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$start_date   = $request->query("start_date");
 		$end_date     = $request->query("end_date");
 		$project_id   = $request->session()->get('project');
@@ -2506,6 +2531,8 @@ class ReportController extends Controller
 
     public function generate_orders(Request $request)
     {
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$start_date   = $request->query("start_date");
 		$end_date     = $request->query("end_date");
 		$project_id   = $request->session()->get('project');
@@ -2666,6 +2693,8 @@ class ReportController extends Controller
 
     public function generate_order_1(Request $request)
     {
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$start_date   = $request->query("start_date");
 		$end_date     = $request->query("end_date");
 		$project_id   = $request->session()->get('project');
@@ -2832,6 +2861,8 @@ class ReportController extends Controller
 
     public function generate_order_2(Request $request)
     {
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$start_date   = $request->query("start_date");
 		$end_date     = $request->query("end_date");
 		$project_id   = $request->session()->get('project');
@@ -3010,6 +3041,8 @@ class ReportController extends Controller
 
     public function generate_delivery(Request $request)
     {
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$start_date   = $request->query("start_date");
 		$end_date     = $request->query("end_date");
 		$project_id   = $request->session()->get('project');
@@ -3203,6 +3236,8 @@ class ReportController extends Controller
 
     public function generate_return(Request $request)
     {
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$start_date   = $request->query("start_date");
 		$end_date     = $request->query("end_date");
 		$project_id   = $request->session()->get('project');
@@ -3387,6 +3422,7 @@ class ReportController extends Controller
     public function generate_usage(Request $request)
     {
     	ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$start_date   = $request->query("start_date");
 		$end_date     = $request->query("end_date");
 		$project_id   = $request->session()->get('project');
@@ -3557,6 +3593,7 @@ class ReportController extends Controller
 	public function generate_usageHouse(Request $request)
     {
     	ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$start_date   = $request->query("start_date");
 		$end_date     = $request->query("end_date");
 		$project_id   = $request->session()->get('project');
@@ -3753,6 +3790,7 @@ class ReportController extends Controller
     }
 	public function generate_usageItem(Request $request,$house_id){
 		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$start_date   = $request->query("start_date");
 		$end_date     = $request->query("end_date");
 		$project_id   = $request->session()->get('project');
@@ -3939,6 +3977,7 @@ class ReportController extends Controller
 	}
 	public function generate_usageHouseDetail(Request $request,$house_id,$item_id){
 		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$start_date   = $request->query("start_date");
 		$end_date     = $request->query("end_date");
 		$project_id   = $request->session()->get('project');
@@ -4133,6 +4172,8 @@ class ReportController extends Controller
 	}
     public function generate_return_usage(Request $request)
     {
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$start_date   = $request->query("start_date");
 		$end_date     = $request->query("end_date");
 		$project_id   = $request->session()->get('project');
@@ -4310,6 +4351,9 @@ class ReportController extends Controller
 
     public function generate_sub_boq(Request $request)
     {
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
+		// print_r($request->all());exit;
 		$start_date   = $request->query("start_date");
 		$end_date     = $request->query("end_date");
 		$project_id   = $request->session()->get('project');
@@ -4342,7 +4386,17 @@ class ReportController extends Controller
 			$item_id = '';
 		}
 
-    	$sql = "SELECT (SELECT `pr_projects`.`name` FROM `pr_projects` WHERE `pr_projects`.`id`=$project_id)AS project,boq.`trans_by`, boq.`house_id`, (SELECT `pr_houses`.`house_no` FROM `pr_houses` WHERE `pr_houses`.id=boq.`house_id`)AS house_no, (SELECT `pr_system_datas`.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id`=(SELECT `pr_houses`.`house_type` FROM `pr_houses` WHERE `pr_houses`.`id`=boq.`house_id`))AS house_type, boqi.`item_id`, (SELECT `pr_items`.`code` FROM `pr_items` WHERE `pr_items`.`id`=boqi.item_id)AS item_code, (SELECT `pr_items`.`name` FROM `pr_items` WHERE `pr_items`.`id`=boqi.item_id)AS item_name, (SELECT `pr_system_datas`.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id`=(SELECT `pr_items`.`cat_id` FROM `pr_items` WHERE `pr_items`.`id`=boqi.`item_id`))AS item_type,(SELECT `pr_items`.`cat_id` FROM `pr_items` WHERE `pr_items`.`id`=boqi.`item_id`)AS item_type_id,(SELECT `pr_system_datas`.`desc` FROM `pr_system_datas` WHERE `pr_system_datas`.`id`=(SELECT `pr_items`.`cat_id` FROM `pr_items` WHERE `pr_items`.`id`=boqi.`item_id`))AS item_type_desc,(SELECT `pr_items`.`cost_purch` FROM `pr_items` WHERE `pr_items`.`id`=boqi.`item_id` AND `pr_items`.`unit_purch`=boqi.`unit`)AS item_price, boqi.`qty_std`, boqi.`qty_add`, (SELECT `pr_units`.`from_desc` FROM `pr_units` WHERE `pr_units`.`from_code`=boqi.`unit` LIMIT 1)AS unit FROM `pr_boqs` AS boq INNER JOIN `pr_boq_items` AS boqi ON boqi.`boq_id` = boq.`id` AND boq.`house_id` IN(SELECT `pr_houses`.`id` FROM `pr_houses` WHERE `pr_houses`.`house_type`=$house_type) $house_id $item_id ";
+    	$sql = "SELECT (SELECT `pr_projects`.`name` FROM `pr_projects` WHERE `pr_projects`.`id`=$project_id)AS project,boq.`trans_by`, boq.`house_id`, boqi.cost,
+		 (SELECT `pr_houses`.`house_no` FROM `pr_houses` WHERE `pr_houses`.id=pr_boq_houses.`house_id`)AS house_no, 
+		 (SELECT `pr_system_datas`.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id`=(SELECT `pr_houses`.`house_type` FROM `pr_houses` WHERE `pr_houses`.`id`=pr_boq_houses.`house_id`))AS house_type, boqi.`item_id`,
+		  (SELECT `pr_items`.`code` FROM `pr_items` WHERE `pr_items`.`id`=boqi.item_id)AS item_code, (SELECT `pr_items`.`name` FROM `pr_items` WHERE `pr_items`.`id`=boqi.item_id)AS item_name, 
+		  (SELECT `pr_system_datas`.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id`=(SELECT `pr_items`.`cat_id` FROM `pr_items` WHERE `pr_items`.`id`=boqi.`item_id`))AS item_type,
+		  (SELECT `pr_items`.`cat_id` FROM `pr_items` WHERE `pr_items`.`id`=boqi.`item_id`)AS item_type_id,
+		  (SELECT `pr_system_datas`.`desc` FROM `pr_system_datas` WHERE `pr_system_datas`.`id`=(SELECT `pr_items`.`cat_id` FROM `pr_items` WHERE `pr_items`.`id`=boqi.`item_id`))AS item_type_desc,
+		  (SELECT `pr_items`.`cost_purch` FROM `pr_items` WHERE `pr_items`.`id`=boqi.`item_id` AND `pr_items`.`unit_purch`=boqi.`unit`)AS item_price, boqi.`qty_std`, boqi.`qty_add`, 
+		  (SELECT `pr_units`.`from_desc` FROM `pr_units` WHERE `pr_units`.`from_code`=boqi.`unit` LIMIT 1)AS unit FROM `pr_boqs` AS boq JOIN pr_boq_houses ON `pr_boq_houses`.boq_id = boq.id
+		  INNER JOIN `pr_boq_items` AS boqi ON boqi.`boq_house_id` = pr_boq_houses.`id` AND pr_boq_houses.`house_id` IN(SELECT `pr_houses`.`id` FROM `pr_houses` WHERE `pr_houses`.`house_type`=$house_type) $house_id $item_id ";
+		//   print_r($sql);
 
     	$report = DB::select($sql);
 
@@ -4453,6 +4507,8 @@ class ReportController extends Controller
 
     public function generate_boq_detail(Request $request)
     {
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$start_date   = $request->query("start_date");
 		$end_date     = $request->query("end_date");
 		$project_id   = $request->session()->get('project');
@@ -4484,8 +4540,8 @@ class ReportController extends Controller
 		}else{
 			$item_id = '';
 		}
-
-    	$sql = "SELECT (SELECT `pr_projects`.`name` FROM `pr_projects` WHERE `pr_projects`.`id`=$project_id)AS project,boq.`trans_by`, boq.`house_id`, (SELECT `pr_houses`.`house_no` FROM `pr_houses` WHERE `pr_houses`.id=boq.`house_id`)AS house_no, (SELECT `pr_system_datas`.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id`=(SELECT `pr_houses`.`house_type` FROM `pr_houses` WHERE `pr_houses`.`id`=boq.`house_id`))AS house_type, boqi.`item_id`, (SELECT `pr_items`.`code` FROM `pr_items` WHERE `pr_items`.`id`=boqi.item_id)AS item_code, (SELECT `pr_items`.`name` FROM `pr_items` WHERE `pr_items`.`id`=boqi.item_id)AS item_name, (SELECT `pr_system_datas`.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id`=(SELECT `pr_items`.`cat_id` FROM `pr_items` WHERE `pr_items`.`id`=boqi.`item_id`))AS item_type,(SELECT `pr_items`.`cat_id` FROM `pr_items` WHERE `pr_items`.`id`=boqi.`item_id`)AS item_type_id,(SELECT `pr_system_datas`.`desc` FROM `pr_system_datas` WHERE `pr_system_datas`.`id`=(SELECT `pr_items`.`cat_id` FROM `pr_items` WHERE `pr_items`.`id`=boqi.`item_id`))AS item_type_desc,(SELECT `pr_items`.`cost_purch` FROM `pr_items` WHERE `pr_items`.`id`=boqi.`item_id` AND `pr_items`.`unit_purch`=boqi.`unit`)AS item_price, boqi.`qty_std`, boqi.`qty_add`, (SELECT `pr_units`.`from_desc` FROM `pr_units` WHERE `pr_units`.`from_code`=boqi.`unit` LIMIT 1)AS unit FROM `pr_boqs` AS boq INNER JOIN `pr_boq_items` AS boqi ON boqi.`boq_id` = boq.`id` AND boq.`house_id` IN(SELECT `pr_houses`.`id` FROM `pr_houses` WHERE `pr_houses`.`house_type`=$house_type) $house_id $item_id ";
+		// print_r($request->all());exit;
+    	$sql = "SELECT (SELECT `pr_projects`.`name` FROM `pr_projects` WHERE `pr_projects`.`id`=$project_id)AS project,boq.`trans_by`, boq.`house_id`, (SELECT `pr_houses`.`house_no` FROM `pr_houses` WHERE `pr_houses`.id=boq.`house_id`)AS house_no, (SELECT `pr_system_datas`.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id`=(SELECT `pr_houses`.`house_type` FROM `pr_houses` WHERE `pr_houses`.`id`=boq.`house_id`))AS house_type, boqi.`item_id`, (SELECT `pr_items`.`code` FROM `pr_items` WHERE `pr_items`.`id`=boqi.item_id)AS item_code, (SELECT `pr_items`.`name` FROM `pr_items` WHERE `pr_items`.`id`=boqi.item_id)AS item_name, (SELECT `pr_system_datas`.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id`=(SELECT `pr_items`.`cat_id` FROM `pr_items` WHERE `pr_items`.`id`=boqi.`item_id`))AS item_type,(SELECT `pr_items`.`cat_id` FROM `pr_items` WHERE `pr_items`.`id`=boqi.`item_id`)AS item_type_id,(SELECT `pr_system_datas`.`desc` FROM `pr_system_datas` WHERE `pr_system_datas`.`id`=(SELECT `pr_items`.`cat_id` FROM `pr_items` WHERE `pr_items`.`id`=boqi.`item_id`))AS item_type_desc,(SELECT `pr_items`.`cost_purch` FROM `pr_items` WHERE `pr_items`.`id`=boqi.`item_id` AND `pr_items`.`unit_purch`=boqi.`unit`)AS item_price, boqi.`qty_std`, boqi.`qty_add`, (SELECT `pr_units`.`from_desc` FROM `pr_units` WHERE `pr_units`.`from_code`=boqi.`unit` LIMIT 1)AS unit FROM `pr_boqs` AS boq INNER JOIN `pr_boq_items` AS boqi ON boqi.`boq_id` = boq.`id` AND boq.is_revise = 0 AND boq.`house_id` IN(SELECT `pr_houses`.`id` FROM `pr_houses` WHERE `pr_houses`.`house_type`=$house_type) $house_id $item_id ";
 
     	$report = DB::select($sql);
 
@@ -4597,6 +4653,8 @@ class ReportController extends Controller
 
     public function stock_balance_detail(Request $request,$item_id)
     {
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
     	$start_date   = $request->query("start_date");
 		$end_date     = $request->query("end_date");
 		$project_id   = $request->session()->get('project');
@@ -4624,7 +4682,8 @@ class ReportController extends Controller
 
     public function generate_stock_balance(Request $request)
     {
-    	set_time_limit(500);
+    	ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$start_date   = $request->query("start_date");
 		$end_date     = $request->query("end_date");
 		$project_id   = $request->session()->get('project');
@@ -4746,6 +4805,8 @@ class ReportController extends Controller
 
     public function generate_all_stock_transaction(Request $request)
     {
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$start_date       = $request->query("start_date");
 		$end_date         = $request->query("end_date");
 		$project_id       = $request->session()->get('project');
@@ -4898,6 +4959,8 @@ class ReportController extends Controller
 
     public function delivery_with_return(Request $request)
     {
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
     	try {
 			$start_date   = $request->start_date;
 			$end_date     = $request->end_date;
@@ -5079,6 +5142,7 @@ class ReportController extends Controller
 
 	public function subUsageCosting(Request $request,$usageID,$houseID,$itemID){
 		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$version = $request->query('version');
 
 		$report = Stock::select([
@@ -5441,6 +5505,7 @@ class ReportController extends Controller
     public function generate_usage_costing(Request $request)
     {
     	ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$start_date   = $request->query("start_date");
 		$end_date     = $request->query("end_date");
 		$project_id   = $request->session()->get('project');
@@ -5906,7 +5971,7 @@ class ReportController extends Controller
 	}
 
 	public function printCompareBOQWithUsage(Request $request){
-
+		
 		try{
 			$projectID = $request->session()->get('project');
 			$report  = UsageDetails::leftJoin('usages','usages.id','usage_details.use_id');
@@ -5989,7 +6054,9 @@ class ReportController extends Controller
 
 	public function generateCompareBOQWithUsage(Request $request)
 	{
+		
 		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$version = $request->query("version");
 		$from_date = $request->query("from_date");
 		$to_date = $request->query("to_date");
@@ -5997,7 +6064,7 @@ class ReportController extends Controller
 
 
     	$report  = UsageDetails::leftJoin('usages','usages.id','usage_details.use_id');
-
+		// print_r($report->limit(9000)->get());exit;
 		if(!empty($request->query('from_date')) && !empty($request->query('to_date'))){
 			$from 	= $request->query('from_date');
 			$to   	= $request->query('to_date');
@@ -6056,7 +6123,8 @@ class ReportController extends Controller
 		}
 
 		$report = $report->get();
-
+		
+		
     	if ($version=="datatables") {
     		$response = Datatables::of($report)
 			->addColumn('warehouse',function($row){
@@ -6112,19 +6180,19 @@ class ReportController extends Controller
 				return null;
 			})
 			->addColumn('boq_unit',function($row){
-				if($boqItem = BoqItem::where(['house_id' => $row->house_id,'item_id' => $row->item_id])->first()){
+				if($boqItem = BoqItem::join('boqs','boqs.id','boq_items.boq_id')->where('boqs.status',1)->where('boqs.is_revise',0)->where(['boq_items.house_id' => $row->house_id,'boq_items.item_id' => $row->item_id])->first()){
 					return $boqItem->unit;
 				}
 				return null;
 			})
 			->addColumn('boq_std',function($row){
-				if($boqItem = BoqItem::where(['house_id' => $row->house_id,'item_id' => $row->item_id])->first()){
+				if($boqItem = BoqItem::join('boqs','boqs.id','boq_items.boq_id')->where('boqs.status',1)->where('boqs.is_revise',0)->where(['boq_items.house_id' => $row->house_id,'boq_items.item_id' => $row->item_id])->first()){
 					return $boqItem->qty_std;
 				}
 				return null;
 			})
 			->addColumn('boq_add',function($row){
-				if($boqItem = BoqItem::where(['house_id' => $row->house_id,'item_id' => $row->item_id])->first()){
+				if($boqItem = BoqItem::join('boqs','boqs.id','boq_items.boq_id')->where('boqs.status',1)->where('boqs.is_revise',0)->where(['boq_items.house_id' => $row->house_id,'boq_items.item_id' => $row->item_id])->first()){
 					return $boqItem->qty_add;
 				}
 				return null;
@@ -6185,19 +6253,19 @@ class ReportController extends Controller
 				return null;
 			})
 			->addColumn('boq_unit',function($row){
-				if($boqItem = BoqItem::where(['house_id' => $row->house_id,'item_id' => $row->item_id])->first()){
+				if($boqItem = BoqItem::join('boqs','boqs.id','boq_items.boq_id')->where('boqs.status',1)->where('boqs.is_revise',0)->where(['boq_items.house_id' => $row->house_id,'boq_items.item_id' => $row->item_id])->first()){
 					return $boqItem->unit;
 				}
 				return null;
 			})
 			->addColumn('boq_std',function($row){
-				if($boqItem = BoqItem::where(['house_id' => $row->house_id,'item_id' => $row->item_id])->first()){
+				if($boqItem = BoqItem::join('boqs','boqs.id','boq_items.boq_id')->where('boqs.status',1)->where('boqs.is_revise',0)->where(['boq_items.house_id' => $row->house_id,'boq_items.item_id' => $row->item_id])->first()){
 					return $boqItem->qty_std;
 				}
 				return null;
 			})
 			->addColumn('boq_add',function($row){
-				if($boqItem = BoqItem::where(['house_id' => $row->house_id,'item_id' => $row->item_id])->first()){
+				if($boqItem = BoqItem::join('boqs','boqs.id','boq_items.boq_id')->where('boqs.status',1)->where('boqs.is_revise',0)->where(['boq_items.house_id' => $row->house_id,'boq_items.item_id' => $row->item_id])->first()){
 					return $boqItem->qty_add;
 				}
 				return null;
@@ -6346,7 +6414,7 @@ class ReportController extends Controller
 							$sheet->cell('N'.($startRows),"N/A");
 						}
 
-						if($boqItem = BoqItem::where(['house_id'=> $dval->house_id, 'item_id' => $dval->item_id])->first()){
+						if($boqItem = BoqItem::join('boqs','boqs.id','boq_items.boq_id')->where('boqs.status',1)->where('boqs.is_revise',0)->where(['boq_items.house_id'=> $dval->house_id, 'boq_items.item_id' => $dval->item_id])->first()){
 							$sheet->cell('O'.($startRows),$boqItem->qty_std);
 							$sheet->cell('P'.($startRows),$boqItem->qty_add);
 							$sheet->cell('Q'.($startRows),$boqItem->unit);
@@ -6490,7 +6558,7 @@ class ReportController extends Controller
 				$report = $report->where('boq_items.item_id',$itemID);
 			}
 
-			$report = $report->get();
+			$report = $report->where('boqs.is_revise',0)->where('boqs_status',1)->get();
 			$data = [
 				'request'   => $request->all(),
 				'title' 	=> trans('lang.report_remaining_boq'),
@@ -6513,8 +6581,9 @@ class ReportController extends Controller
 
 	public function generateRemainingBOQ(Request $request){
 		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$version 	= $request->query("version");
-		$endDate 	= $request->query("end_date");
+		$endDate 	= date("Y-m-d H:i:s",strtotime($request->query("end_date")));
 		$zoneID 	= $request->query("zone");
 		$blockID 	= $request->query("block");
 		$streetID 	= $request->query("street");
@@ -6523,7 +6592,7 @@ class ReportController extends Controller
 		$itemType 	= $request->query("product_type");
 		$itemID 	= $request->query("product");
 
-		$report  = BoqItem::leftJoin('boqs','boqs.id','boq_items.boq_id');
+		$report  = BoqItem::select('boq_items.*','boq_items.house_id as boq_house_id','boqs.trans_date')->join('boqs','boqs.id','boq_items.boq_id');
 
 		if($zoneID){
 			if($houseIds = House::where('zone_id',$zoneID)->pluck('id')){
@@ -6563,7 +6632,8 @@ class ReportController extends Controller
 			$report = $report->where('boq_items.item_id',$itemID);
 		}
 
-		$report = $report->get();
+		$report = $report->where('boqs.is_revise',0)->where('boqs.status',1)->get();
+		// print_r($report);exit;
 
 		if($version=="datatables"){
 			$response = Datatables::of($report)
@@ -6587,6 +6657,16 @@ class ReportController extends Controller
 							}
 						}
 					}
+					return null;
+				})
+				->addColumn('building',function($row){
+					// if(getSetting()->allow_block == 1){
+						if($house = House::where(['id'=> $row->house_id])->first()){
+							if($houseType = SystemData::where(['id' => $house->building_id])->first()){
+								return $houseType->name;
+							}
+						}
+					// }
 					return null;
 				})
 
@@ -6969,6 +7049,7 @@ class ReportController extends Controller
 
 	public function generateRemainingBOQTotal(Request $request){
 		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$version 	= $request->query("version");
 		$endDate 	= $request->query("end_date");
 		$itemType 	= $request->query("product_type");
@@ -6990,7 +7071,7 @@ class ReportController extends Controller
 			'boqs.trans_date',
 		];
 		$report  = BoqItem::select($columns)
-				->leftJoin('boqs','boqs.id','boq_items.boq_id')
+				->join('boqs','boqs.id','boq_items.boq_id')
 				->leftJoin('items','items.id','boq_items.item_id');
 
 		if($endDate){
@@ -7005,7 +7086,7 @@ class ReportController extends Controller
 			$report = $report->where('boq_items.item_id',$itemID);
 		}
 
-		$report = $report->groupBy(['boq_items.item_id'])->get();
+		$report = $report->where('boqs.is_revise',0)->where('boqs.status',1)->groupBy(['boq_items.item_id'])->get();
 
 		if($version=="datatables"){
 			$response = Datatables::of($report)
@@ -7013,13 +7094,17 @@ class ReportController extends Controller
 					$columns  = [
 						'boq_items.*',
 						'units.factor',
+						// DB::raw("(CASE WHEN (SELECT pr_units.`factor` FROM pr_units WHERE pr_units.`from_code` = '{$row->unit_stock}' AND pr_units.`to_code` = pr_boq_items.unit)!='' THEN (SELECT pr_units.`factor` FROM pr_units WHERE pr_units.`from_code` = '{$row->unit_stock}' AND pr_units.`to_code` = pr_boq_items.unit) ELSE 1 END) as factor")
 					];
 					$boqItems = BoqItem::select($columns)
+							->join('boqs','boqs.id','boq_items.boq_id')
 							->leftJoin('units',function($join) use($row){
 								$join->on('units.from_code','boq_items.unit')
 									 ->where('units.to_code',$row->unit_purch);
 							})
 							->where('item_id',$row->item_id)
+							->where('boqs.is_revise',0)
+							->where('boqs.status',1)
 							->get();
 					$qtyStd = 0;
 					if(!empty($boqItems) && count($boqItems) > 0){
@@ -7038,13 +7123,17 @@ class ReportController extends Controller
 					$columns  = [
 						'boq_items.*',
 						'units.factor',
+						// DB::raw("(CASE WHEN (SELECT pr_units.`factor` FROM pr_units WHERE pr_units.`from_code` = '{$row->unit_stock}' AND pr_units.`to_code` = pr_boq_items.unit)!='' THEN (SELECT pr_units.`factor` FROM pr_units WHERE pr_units.`from_code` = '{$row->unit_stock}' AND pr_units.`to_code` = pr_boq_items.unit) ELSE 1 END) as factor")
 					];
 					$boqItems = BoqItem::select($columns)
+							->join('boqs','boqs.id','boq_items.boq_id')
 							->leftJoin('units',function($join) use($row){
 								$join->on('units.from_code','boq_items.unit')
 									 ->where('units.to_code',$row->unit_purch);
 							})
 							->where('item_id',$row->item_id)
+							->where('boqs.is_revise',0)
+							->where('boqs.status',1)
 							->get();
 					$qtyAdd = 0;
 					if(!empty($boqItems) && count($boqItems) > 0){
@@ -7177,11 +7266,14 @@ class ReportController extends Controller
 						$qtyAdd = 0;
 						$qtyStd = 0;
 						$boqItems = BoqItem::select(['boq_items.*','units.factor'])
+								->join('boqs','boqs.id','boq_items.boq_id')
 								->leftJoin('units',function($join) use($dval){
 									$join->on('units.from_code','boq_items.unit')
 										 ->where('units.to_code',$dval->unit_purch);
 								})
 								->where('item_id',$dval->item_id)
+								->where('boqs.status',1)
+								->where('boqs.is_revise',0)
 								->get();
 						
 						if(!empty($boqItems) && count($boqItems) > 0){
@@ -7261,7 +7353,7 @@ class ReportController extends Controller
 			'boqs.trans_date',
 		];
 		$report  = BoqItem::select($columns)
-				->leftJoin('boqs','boqs.id','boq_items.boq_id')
+				->join('boqs','boqs.id','boq_items.boq_id')
 				->leftJoin('items','items.id','boq_items.item_id');
 
 		if($endDate){
@@ -7276,7 +7368,7 @@ class ReportController extends Controller
 			$report = $report->where('boq_items.item_id',$itemID);
 		}
 
-		$report = $report->groupBy(['boq_items.item_id'])->get();
+		$report = $report->where('boqs.status',1)->where('boqs.is_revise',0)->groupBy(['boq_items.item_id'])->get();
 
 		$data = [
 			'title' 	=> trans('lang.report_remaining_boq_total'),
@@ -7314,7 +7406,8 @@ class ReportController extends Controller
 	}
 
 	public function generateInventoryValuationDetailSubDataTable(Request $request,$itemID){
-		ini_set('max_execution_time', -1);
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$version 	= $request->query("version");
 		$endDate 	= $request->query("end_date");
 		$warehouseID= $request->query("warehouse");
@@ -7591,6 +7684,7 @@ class ReportController extends Controller
 
 	public function generateInventoryValuationDetail(Request $request){
 		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$version 		= $request->query("version");
 		$endDate 		= $request->query("end_date");
 		$itemType 		= $request->query("product_type");
@@ -7836,6 +7930,7 @@ class ReportController extends Controller
 
 	public function printInventoryValuationDetail(Request $request){
 		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$version 		= $request->query("version");
 		$endDate 		= $request->query("end_date");
 		$itemType 		= $request->query("product_type");
@@ -7977,6 +8072,7 @@ class ReportController extends Controller
 
 	public function printInventoryValuationDetailSubDataTable(Request $request,$itemID){
 		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$version 	= $request->query("version");
 		$endDate 	= $request->query("end_date");
 		$warehouseID= $request->query("warehouse");
@@ -8107,6 +8203,7 @@ class ReportController extends Controller
 
 	public function generateInventoryValuationSummary(Request $request){
 		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$version 		= $request->query("version");
 		$endDate 		= $request->query("end_date");
 		$itemType 		= $request->query("product_type");
@@ -8317,6 +8414,7 @@ class ReportController extends Controller
 
 	public function printInventoryValuationSummary(Request $request){
 		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
 		$version 		= $request->query("version");
 		$endDate 		= $request->query("end_date");
 		$itemType 		= $request->query("product_type");
@@ -8443,7 +8541,6 @@ class ReportController extends Controller
 		}else{
 			$warehouse = false;
 		}
-
 		$data = [
 			'report' => $report,
 			'title'  => trans('lang.inventory_valuation_summary'),
@@ -8454,5 +8551,276 @@ class ReportController extends Controller
 		];
 
 		return view('reports.inventory.print.inventory_valuation_summary_print')->with($data);
+	}
+	public function boqTreeView(Request $request){
+		$pro_id = Session::get('project');
+		
+		$house = DB::table('houses')
+		->select(
+			'houses.*',
+			DB::raw('(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_houses`.`zone_id`) AS zone_name'),
+			DB::raw('(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_houses`.`block_id`) AS block_name'),
+			DB::raw('(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_houses`.`building_id`) AS building_name'),
+			DB::raw('(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_houses`.`street_id`) AS street_name'),
+			DB::raw('(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_houses`.`house_type`) AS house_type_name')
+		)->where('status',1)->get();
+
+		$zone = DB::table('system_datas')->where('type','ZN')->where('parent_id',$pro_id)->where('status','1')->get();
+		$li_html='';
+		foreach($zone as $row_zone){
+			$li_html.='<li><a>'.$row_zone->name.'</a>';
+				$li_html.='<ul>';
+					$block = DB::table('houses')->select('houses.zone_id','houses.block_id',DB::raw('(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_houses`.`block_id`) AS block_name'))
+					->where('status',1)->where('houses.zone_id',$row_zone->id)
+					->groupBy('houses.block_id')->get();				
+					foreach($block as $blocks){
+						$li_html.='<li>';
+							$li_html.='<a>'.$blocks->block_name.'</a>';
+							$li_html.='<ul>';
+								$building = DB::table('houses')->select('houses.zone_id','houses.block_id','houses.building_id',
+								DB::raw('(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_houses`.`building_id`) AS building_name'))
+								->where('status',1)->where('houses.zone_id',$row_zone->id)->where('houses.block_id',$blocks->block_id)
+								->groupBy('houses.block_id')->get();
+								foreach($building as $buildings){
+									$li_html.='<li>';
+										$li_html.='<a>'.$buildings->building_name.'</a>';
+										$li_html.='<ul>';
+											$street = DB::table('houses')->select('houses.zone_id','houses.block_id','houses.building_id','houses.street_id',
+											DB::raw('(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_houses`.`street_id`) AS street_name'))
+											->where('status',1)->where('houses.zone_id',$row_zone->id)->where('houses.block_id',$blocks->block_id)
+											->where('houses.building_id',$buildings->building_id)
+											->groupBy('houses.street_id')->get();
+											foreach($street as $streets){
+												$li_html.='<li>';
+													$li_html.='<a>'.$streets->street_name.'</a>';
+													$li_html.='<ul>';
+														$house_type = DB::table('houses')->select('houses.zone_id','houses.block_id','houses.building_id','houses.street_id','houses.house_type',
+														DB::raw('(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_houses`.`house_type`) AS house_type_name'))
+														->where('status',1)->where('houses.zone_id',$row_zone->id)->where('houses.block_id',$blocks->block_id)
+														->where('houses.building_id',$buildings->building_id)->where('houses.street_id',$streets->street_id)
+														->groupBy('houses.house_type')->get();
+														foreach($house_type as $house_types){
+															$li_html.='<li>';
+																$li_html.='<a>'.$house_types->house_type_name.'</a>';
+																$li_html.='<ul>';
+																	$house = DB::table('houses')->select('houses.*')
+																	->where('status',1)->where('houses.zone_id',$row_zone->id)->where('houses.block_id',$blocks->block_id)
+																	->where('houses.building_id',$buildings->building_id)->where('houses.street_id',$streets->street_id)->get();
+																	foreach($house as $houses){
+																		$li_html.='<li>';
+																			$li_html.='<a style="padding-left:7px;" onclick="geBOQFromHouse('.$houses->id.')">'.$houses->house_no.'</a>';
+																		$li_html.='</li>';
+																	}		
+																$li_html.='</ul>';
+															$li_html.='</li>';
+														}		
+													$li_html.='</ul>';
+												$li_html.='</li>';
+											}		
+										$li_html.='</ul>';
+									$li_html.='</li>';
+								}		
+							$li_html.='</ul>';	
+						$li_html.='</li>';
+					}		
+				$li_html.='</ul>';	
+			$li_html.='</li>';	
+		} 
+		$data = [
+			'title'       => trans('lang.tree_view'),
+			'icon'        => 'fa fa-shopping-cart',
+			// 'house'       => $house,
+			'li_html'     =>$li_html,
+			'small_title' => trans('lang.report'),
+			'background'  => '',
+			'link'        => [
+				'home'	=> [
+						'url' 		=> url('/'),
+						'caption' 	=> trans('lang.home'),
+				],
+				'report'	=> [
+						'url' 		=> '#',
+						'caption' 	=> trans('lang.report'),
+				],
+				'purchase'	=> [
+						'url' 		=> '#',
+						'caption' 	=> trans('lang.tree_view'),
+				],
+				'request'	=> [
+						'caption' 	=> trans('lang.request'),
+				],
+			],
+		];
+		return view('reports.boq.tree')->with($data);
+	}
+	public function getBoq(Request $request){
+		$report ="";
+		$project_id = Session::get('project');
+		if(!empty($request->house_id)){
+			// $sql = "SELECT (SELECT `pr_projects`.`name` FROM `pr_projects` WHERE `pr_projects`.`id`=$project_id)AS project,boq.`trans_by`, 
+			// pr_boq_houses.`house_id`,
+			// (SELECT `pr_houses`.`house_no` FROM `pr_houses` WHERE `pr_houses`.id=pr_boq_houses.`house_id`)AS house_no, 
+			// (SELECT `pr_system_datas`.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id`=(SELECT `pr_houses`.`house_type` FROM `pr_houses` WHERE `pr_houses`.`id`=pr_boq_houses.`house_id`))AS house_type, boqi.`item_id`,
+			// (SELECT `pr_items`.`code` FROM `pr_items` WHERE `pr_items`.`id`=boqi.item_id)AS item_code, (SELECT `pr_items`.`name` FROM `pr_items` WHERE `pr_items`.`id`=boqi.item_id)AS item_name, 
+			// (SELECT `pr_system_datas`.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id`=(SELECT `pr_items`.`cat_id` FROM `pr_items` WHERE `pr_items`.`id`=boqi.`item_id`))AS item_type,
+			// (SELECT `pr_items`.`cat_id` FROM `pr_items` WHERE `pr_items`.`id`=boqi.`item_id`)AS item_type_id,
+			// (SELECT `pr_system_datas`.`desc` FROM `pr_system_datas` WHERE `pr_system_datas`.`id`=(SELECT `pr_items`.`cat_id` FROM `pr_items` WHERE `pr_items`.`id`=boqi.`item_id`))AS item_type_desc,
+			// (SELECT `pr_items`.`cost_purch` FROM `pr_items` WHERE `pr_items`.`id`=boqi.`item_id` AND `pr_items`.`unit_purch`=boqi.`unit`)AS item_price, boqi.`qty_std`, boqi.`qty_add`, 
+			// (SELECT `pr_units`.`from_desc` FROM `pr_units` WHERE `pr_units`.`from_code`=boqi.`unit` LIMIT 1)AS unit 
+			// FROM `pr_boqs` AS boq 
+			// JOIN pr_boq_houses ON `pr_boq_houses`.boq_id = boq.id
+			// JOIN `pr_boq_items` AS boqi ON boqi.`boq_house_id` WHERE  pr_boq_houses.`house_id`= $request->house_id";
+			$sql = "SELECT pr_boq_items.*,
+			(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = pr_boq_items.`working_type`) AS working_type,
+			(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = pr_items.`cat_id`) AS item_type,	
+			(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_houses`.`house_type`) AS house_type,
+			pr_items.`name`,
+			pr_items.`desc`,
+			pr_items.`code`,
+			pr_houses.`house_no`,
+			pr_houses.`house_desc`	
+			FROM pr_boq_items 
+			JOIN pr_boq_houses 
+				ON pr_boq_houses.id = pr_boq_items.boq_house_id
+			JOIN pr_boqs
+				ON pr_boqs.id = pr_boq_houses.boq_id 
+			JOIN pr_houses
+				ON pr_houses.id = pr_boq_houses.`house_id`
+			JOIN pr_items
+				ON pr_items.id=pr_boq_items.item_id	
+			WHERE pr_boqs.status = 1 AND pr_boqs.is_revise = 0 AND pr_boq_items.house_id=$request->house_id";
+			$report = DB::select($sql);
+		}
+		return response()->json($report);
+	}
+	public function getBoqprint(Request $request){
+		$report ="";
+		$project_id = Session::get('project');
+		if(!empty($request->house_id)){
+			$sql = "SELECT pr_boq_items.*,
+			(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = pr_boq_items.`working_type`) AS working_type,
+			(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = pr_items.`cat_id`) AS item_type,	
+			(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_houses`.`house_type`) AS house_type,
+			pr_items.`name`,
+			pr_items.`desc`,
+			pr_items.`code`,
+			pr_houses.`house_no`,
+			pr_houses.`house_desc`	
+			FROM pr_boq_items 
+			JOIN pr_houses
+				ON pr_houses.id = pr_boq_items.`house_id`
+			JOIN pr_boqs
+				ON pr_boqs.id = pr_boq_items.boq_id 
+			JOIN pr_items
+				ON pr_items.id=pr_boq_items.item_id	
+			WHERE pr_boqs.status = 1 AND pr_boq_items.house_id=$request->house_id";
+			$house = DB::select($sql);
+		}
+		$data = [
+			'title'       => trans('lang.tree_view'),
+			'icon'        => 'fa fa-shopping-cart',
+			'house'		  => $house,	
+			'small_title' => trans('lang.report'),
+			'background'  => '',
+			'link'        => [
+				'home'	=> [
+						'url' 		=> url('/'),
+						'caption' 	=> trans('lang.home'),
+				],
+				'report'	=> [
+						'url' 		=> '#',
+						'caption' 	=> trans('lang.report'),
+				],
+				'purchase'	=> [
+						'url' 		=> '#',
+						'caption' 	=> trans('lang.tree_view'),
+				],
+				'request'	=> [
+						'caption' 	=> trans('lang.request'),
+				],
+			],
+		];
+		return view('reports.boq.print_tree')->with($data);
+	}
+	public function getBoqexport(Request $request){
+		ini_set('max_execution_time', 0);
+		ini_set('memory_limit', '-1');
+		$report ="";
+		$project_id = Session::get('project');
+		if(!empty($request->house_id)){
+			$sql = "SELECT pr_boq_items.*,
+			(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = pr_boq_items.`working_type`) AS working_type,
+			(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = pr_items.`cat_id`) AS item_type,	
+			(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_houses`.`house_type`) AS house_type,
+			pr_items.`name`,
+			pr_items.`desc`,
+			pr_items.`code`,
+			pr_houses.`house_no`,
+			pr_houses.`house_desc`	
+			FROM pr_boq_items 
+			JOIN pr_boq_houses 
+				ON pr_boq_houses.id = boq_items.boq_house_id
+			JOIN pr_boqs
+				ON pr_boqs.id = pr_boq_houses.boq_id 
+			JOIN pr_houses
+				ON pr_houses.id = pr_boq_houses.`house_id`
+			JOIN pr_items
+				ON pr_items.id=pr_boq_items.item_id	
+			WHERE pr_boqs.status = 1 AND pr_boqs.is_revise = 0 AND pr_boq_items.house_id=$request->house_id";
+			$report = DB::select($sql);
+		}
+		Excel::create('Tree BOQ.export_'.date('Y_m_d_H_i_s'),function($excel) use($report){
+			$excel->setCreator(Auth::user()->name)->setCompany(config('app.name'));
+			$excel->sheet('Tree BOQ Info',function($sheet) use($report){
+				$cells = 1;
+				$sheet->cell(('A'.$cells),"List BOQ by House");
+				$sheet->mergeCells('A1:J1');
+				$sheet->cell(("A1"),function($cells){
+					$cells->setFontSize(15);;
+					$cells->setAlignment('center');
+					$cells->setFontWeight('bold');
+					$cells->setFontFamily('Khmer OS Muol');
+				});
+				$cells++;
+				$sheet->cell('A'.$cells,trans('lang.working_type'));
+				$sheet->cell('B'.$cells,trans('lang.house_type'));
+				$sheet->cell('C'.$cells,trans('lang.house_no'));
+				$sheet->cell('D'.$cells,trans('lang.item_type'));
+				$sheet->cell('E'.$cells,trans('lang.item_code'));
+				$sheet->cell('F'.$cells,trans('lang.item_name'));
+				$sheet->cell('G'.$cells,trans('lang.boq_qty'));
+				$sheet->cell('H'.$cells,trans('lang.add_qty'));
+				$sheet->cell('I'.$cells,trans('lang.units'));
+				$sheet->cell('J'.$cells,trans('lang.price'));	
+				$sheet->cell(("A$cells:J$cells"),function($cells){
+					$cells->setBackground('#337ab7');
+					$cells->setAlignment('center');
+					$cells->setFontFamily('Khmer OS Battambang');
+					$cells->setFontColor('#ffffff');
+				});			
+				$i = 1;
+				if(count($report)>0){
+					foreach ($report as $value) {
+						$cells++;
+						$sheet->cell('A'.($cells),$value->working_type);
+						$sheet->cell('B'.($cells),$value->house_type);
+						$sheet->cell('C'.($cells),$value->house_no);
+						$sheet->cell('D'.($cells),$value->item_type);
+						$sheet->cell('E'.($cells),$value->code);
+						$sheet->cell('F'.($cells),$value->name);
+						$sheet->cell('G'.($cells),$value->qty_std);
+						$sheet->cell('H'.($cells),$value->qty_add);
+						$sheet->cell('I'.($cells),$value->unit);
+						$sheet->cell('J'.($cells),$value->cost);
+						$sheet->cell(("A$cells:J$cells"),function($cells){
+							$cells->setBorder('thin', 'thin', 'thin', 'thin');
+							$cells->setAlignment('center');
+							$cells->setFontFamily('Khmer OS Battambang');
+							$cells->setFontColor('#000000');
+						});			
+					}
+				}
+			});
+		})->download('xlsx');
 	}
 }

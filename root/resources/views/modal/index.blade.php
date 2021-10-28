@@ -51,7 +51,11 @@
 					<thead>
 						<tr>
 							<th width="15%" class="text-center all">{{ trans('lang.name') }}</th>
+							@if($types)
+							<th width="15%" class="text-center all">{{ trans('lang.parent') }}</th>
+							@else
 							<th width="60%" class="text-center">{{ trans('lang.desc') }}</th>
+							@endif
 							<th width="10%" class="text-center all">{{ trans('lang.status') }}</th>
 							<th width="15%" class="text-center all">{{ trans('lang.action') }}</th>
 						</tr>
@@ -253,11 +257,19 @@
 			@endif
 			
 			$('td:eq(2)',nRow).html(str).addClass("text-center");
+
+			@if($types == 'item_type')
+				var desc='<span>'+aData['parent_name']+' </span>';
+			@else
+				var desc ='<span>'+aData['desc']+' </span>';
+			@endif	
+			
+			$('td:eq(1)',nRow).html(desc)
 			if (objName) {
 				var obj = {
 					'id':aData['id'],
 					'name':aData['name'],
-					'desc':aData['desc'],
+					'desc':aData['desc'] ,
 					'type':aData['type']};
 				objName.push(obj);
 			}
@@ -265,8 +277,11 @@
 	});
 	
 	$(function(){
+		$('.select2').select2({placeholder:'{{trans("lang.please_choose")}}',width:'100%',allowClear:'true'});
 		/* button click save */
 		$("#btnAdd").on("click",function(){
+			var type = "{{$types}}";
+			console.log(type);
 			var rounte = $(this).attr('rounte');
 			$('.system-form').attr('action',rounte);
 			$('.system-modal').children().find('div').children().find('h4').html('{{trans("lang.add_new")}}');
@@ -276,7 +291,9 @@
 			$('.button-submit').attr('id','btnSave').attr('name','btnSave');
 			$('.button-submit').html('{{trans("lang.save")}}');
 			$('.system-modal').modal('show');
-			
+			if(type==''){
+				$('.parent_id').hide();
+			}
 			$("#btnSave").on('click',function(){
 				if(chkValid([".sys-name",".sys-desc"])){
 					if(chkDublicateName(objName, '#sys-name')){
@@ -304,11 +321,13 @@
 	});	
 	
 	function onEdit(field){
+		var type = "{{$types}}";
 		var id = $(field).attr('row_id');
 		var rounte = $(field).attr('row_rounte');
 		var _token = $("input[name=_token]").val();
 		$('.system-form').attr('action',rounte);
 		$('.system-modal').children().find('div').children().find('h4').html('{{trans("lang.edit")}}');
+		
 		if(objName){
 			$.each(objName.filter(c=>c.id==id),function(key,val){
 				$('#old_name').val(val.name);
@@ -319,7 +338,9 @@
 		$('.button-submit').attr('id','btnUpdate').attr('name','btnUpdate');
 		$('.button-submit').html('{{trans("lang.save_change")}}');
 		$('.system-modal').modal('show');
-		
+		if(type==''){
+			$('.parent_id').hide();
+		}
 		$("#btnUpdate").on('click',function(){
 			if(chkValid([".sys-name",".sys-desc"])){
 				if(chkDublicateName(objName, '#sys-name','#old_name')){

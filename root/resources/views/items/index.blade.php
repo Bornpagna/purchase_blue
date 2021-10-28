@@ -21,7 +21,7 @@
 					<span class="caption-helper">{{$small_title}}</span>
 				</div>
 				<div class="actions">
-					@if(isset($routeDownloadSampleUpdatePrice))
+					{{-- @if(isset($routeDownloadSampleUpdatePrice))
 						<a title="{{trans('lang.sample_update_price')}}" class="btn btn-circle btn-success" href="{{$routeDownloadSampleUpdatePrice}}">
 							<i class="fa fa-file-excel-o"></i> {{trans('lang.sample_update_price')}}
 						</a>
@@ -30,7 +30,7 @@
 						<a rounte="{{$routeUploadSampleUpdatePrice}}" title="{{trans('lang.update_price')}}" class="btn btn-circle btn-default" id="btnUpload">
 							<i class="fa fa-dollar"></i> {{trans('lang.update_price')}}
 						</a>
-					@endif
+					@endif --}}
 					@if(isset($rounteSave))
 						<a rounte="{{$rounteSave}}" title="{{trans('lang.add_new')}}" class="btn btn-circle btn-icon-only btn-default" id="btnAdd">
 							<i class="fa fa-plus"></i>
@@ -58,7 +58,7 @@
 						<button class="close" data-close="alert"></button><strong>{{trans('lang.error')}}!</strong> {{Session::get('error')}} 
 					</div>
 				<?php endif; ?>
-				<?php if(Session::has('bug') && count(Session::get('bug')>0)): ?>
+				<?php if(Session::has('bug') && Session::get('bug')>0): ?>
 					<?php
 						echo '<div class="alert alert-danger display-show"><button class="close" data-close="alert"></button>';
 						foreach(Session::get('bug') as $key=>$val){
@@ -159,7 +159,7 @@
 	}
 	
 	$(function(){
-		/* set value to unit conversion */
+		$('.my-select2').select2({placeholder:'{{trans("lang.please_choose")}}',width:'100%',allowClear:'true'});
 		$("#unit-stock").on('change',function(){
 			var val = $(this).val();
 			if(val!='' && val!=null && jsonUnit){
@@ -222,9 +222,11 @@
 		
 		/* upload file excel */
 		$('#btnUpload').on('click',function(){
+			console.log(11);
 			$('.upload-excel-form').modal('show');
 			var rounte = $(this).attr('rounte');
 			$('.upload-excel-form').attr('action',rounte);
+			$("#home-tab").text("Item Upload")
 			$('#btn_upload_excel').on('click',function(){
 				if(onUploadExcel()){}else{return false}
 			}); 
@@ -298,7 +300,9 @@
 	}
 	
 	@if(hasRole('item_type_add'))
+	
 		var objItemType = JSON.parse(convertQuot('{{\App\Model\SystemData::where(["type"=>"IT","parent_id"=>Session::get('project')])->get(["name"])}}'));
+		console.log(objItemType)
 		$("#btnAddItemType").on('click', function(event){
 			event.preventDefault();
 			$('.system-modal').children().find('div').children().find('h4').html('{{trans("lang.add_new")}}');

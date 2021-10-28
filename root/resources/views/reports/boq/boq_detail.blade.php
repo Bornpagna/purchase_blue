@@ -380,11 +380,11 @@
 				{data: 'qty_std', name:'qty_std'},
                 {data: 'qty_add', name:'qty_add'},
                 {data: 'unit', name:'unit'},
-                {data: 'item_price', name:'item_price'},
+                {data: 'cost', name:'cost'},
 				{data: 'item_id', name:'item_id'}
 			],order:[2,'desc'],fnCreatedRow:function(nRow,aData,iDataIndex){
-                var total = (parseFloat(aData["qty_std"]) + parseFloat(aData["qty_add"])) * parseFloat(aData["item_price"]);
-                $('td:eq(8)',nRow).html(formatDollar(aData["item_price"])).addClass("text-center");
+                var total = (parseFloat(aData["qty_std"]) + parseFloat(aData["qty_add"])) * parseFloat(aData["cost"]);
+                $('td:eq(8)',nRow).html(formatDollar(aData["cost"])).addClass("text-center");
                 $('td:eq(9)',nRow).html(formatDollar(total)).addClass("text-center");
 			}
 		});

@@ -21,6 +21,12 @@ Route::group(['prefix'=>'report'],function(){
 		});
 	});
 });
+/////////////////// Tree View //////////////////////
+Route::match(['get','post'],'report/boqTreeView','ReportController@boqTreeView');
+Route::get('report/boqTreeView/getBoq','ReportController@getBoq');
+Route::get('report/boqTreeView/getBoqexport','ReportController@getBoqexport'); 
+Route::get('report/boqTreeView/getBoqprint','ReportController@getBoqprint'); 
+/////////////////// End Tree View //////////////////
 /*/////////////////Request Print//////////////////*/
 Route::get('/purch/request/print/{id}','ReportController@print_request')->middleware('checkRole:purchase_request_print');
 Route::get('/purch/order/print/{id}','ReportController@print_order')->middleware('checkRole:purchase_order_print');

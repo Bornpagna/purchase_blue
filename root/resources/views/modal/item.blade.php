@@ -48,7 +48,7 @@
 											<div class="input-group">
 												<select id="item-type" name="item_type" class="item-type my-select2 form-control">
 													<option value=""></option>
-													{{getSystemData('IT')}}
+													{{getSystemData('IT',NULL,NULL)}}
 												</select>
 												<span class="input-group-addon btn blue" id="btnAddItemType">
 													<i class="fa fa-plus"></i>

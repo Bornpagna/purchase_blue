@@ -40,6 +40,7 @@ class BlockController extends Controller
 				],
 			],			
 			'rounte'		=> url("block/dt"),
+			'types'			=> ''
 		];
 		
 		if(hasRole('block_add')){

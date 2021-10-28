@@ -38,6 +38,12 @@
 							<i class="icon-cloud-upload"></i>
 						</a>
 					@endif
+
+					@if(isset($rounteUploadeUpdate))
+						<a rounte="{{$rounteUploadeUpdate}}" title="{{trans('lang.upload_update')}}" class="btn btn-circle btn-icon-only btn-default" id="btnUploadUpdate">
+							<i class="icon-cloud-upload"></i>
+						</a>
+					@endif
 				</div>
 			</div>
 			<div class="portlet-body">
@@ -67,6 +73,7 @@
 							<th width="10%" class="text-center">{{ trans('lang.house_type') }}</th>
 							@if(getSetting()->allow_zone==1)<th width="10%" class="text-center all">{{ trans('lang.zone') }}</th>@endif
 							@if(getSetting()->allow_block==1)<th width="10%" class="text-center all">{{ trans('lang.block') }}</th>@endif
+							<th width="10%" class="text-center all">{{ trans('lang.building') }}</th>
 							<th width="10%" class="text-center all">{{ trans('lang.street') }}</th>
 							<th width="17%" class="text-center all">{{ trans('lang.desc') }}</th>
 							<th width="8%" class="text-center all">{{ trans('lang.status') }}</th>
@@ -239,6 +246,7 @@
 			{data: 'house_type_desc', name:'house_type_desc'},
 			@if(getSetting()->allow_zone==1){data: 'zone', name:'zone'},@endif
 			@if(getSetting()->allow_block==1){data: 'block', name:'block'},@endif
+			{data: 'building', name:'building'},
 			{data: 'street', name:'street'},
 			{data: 'house_desc', name:'house_desc'},
 			{data: 'status', name:'status'},
@@ -251,7 +259,7 @@
 			}else{
 				var str='<span class="label label-danger" style="font-size: smaller;">{{trans("lang.stopped")}}</span>';
 			}
-			$('td:eq(<?php if(getSetting()->allow_zone==1 && getSetting()->allow_block==1){echo "7";}elseif(getSetting()->allow_zone==1){echo "6";}elseif(getSetting()->allow_block==1){echo "6";}else{echo "5";} ?>)',nRow).html(str).addClass("text-center");
+			$('td:eq(8)',nRow).html(str).addClass("text-center");
 			
 			if (objName) {
 				var obj = {
@@ -261,6 +269,7 @@
 					'house_desc':aData['house_desc'],
 					'zone_id':aData['zone_id'],
 					'block_id':aData['block_id'],
+					'building_id':aData['building_id'],
 					'street_id':aData['street_id'],
 					'status':aData['status'],
 				};
@@ -340,15 +349,17 @@
 			$('.house-modal').modal('show');
 			
 			$("#btnSave").on('click',function(){
+				
 				var table_purchase = $('#table_purchase').DataTable();
 				if (!table_purchase.data().count()) {
+					
 					$('.house-modal').modal('hide');
 					return false;
 				}else{
-					if(chkValid([".street",<?php if(getSetting()->allow_zone==1){echo '".zone",';}?><?php if(getSetting()->allow_block==1){echo '".block",';}?>".house_type",".line_house_no",".line_house_desc",".line_status"])){
+					if(chkValid([".street",".zone",".block",".house_type",".line_house_no",".line_house_desc",".line_status"])){
 						var dupArray = [];
 						var isValid = true;
-						var street = $('#street').val();
+						var street = $('#building_id').val();
 						$(".line_house_no").each(function(i){
 							dupArray[i] = $(this).val();
 							if(objName && street!='' && street!=null){
@@ -382,6 +393,17 @@
 		
 		/* upload file excel */
 		$('#btnUpload').on('click',function(){
+			var rounte = $(this).attr('rounte');
+			$('.upload-excel-form').attr('action',rounte);
+			$('.upload-excel-form').modal('show');
+			$('#btn_upload_excel').on('click',function(){
+				if(onUploadExcel()){}else{return false}
+			}); 
+		});
+		/* end upload file excel */
+
+		/* upload file excel */
+		$('#btnUploadUpdate').on('click',function(){
 			var rounte = $(this).attr('rounte');
 			$('.upload-excel-form').attr('action',rounte);
 			$('.upload-excel-form').modal('show');
@@ -447,6 +469,7 @@
 				$('#desc-edit').text(val.house_desc);
 				$('#house_no-edit').val(val.house_no);
 				$('#old_house_no').val(val.house_no);
+				$('#building_id-edit').select2('val',val.building_id);
 			});
 		}
 		$('.button-submit-edit').attr('id','btnUpdate').attr('name','btnUpdate');
@@ -500,6 +523,7 @@
 			$('.button-submit').attr('id','btnSaveZone').attr('name','btnSaveZone').attr('onclick','onSubmitZone(this)');
 			$('.button-submit').html('{{trans("lang.save")}}');
 			$('.system-modal').modal('show');
+			$('.parent_id').hide();
 		});
 
 		function onSubmitZone(field){
@@ -546,6 +570,7 @@
 			$('.button-submit').attr('id','btnSaveZoneEdit').attr('name','btnSaveZoneEdit').attr('onclick','onSubmitZoneEdit(this)');
 			$('.button-submit').html('{{trans("lang.save")}}');
 			$('.system-modal').modal('show');
+			$('.parent_id').hide();
 		});
 
 		function onSubmitZoneEdit(field){
@@ -595,6 +620,7 @@
 			$('.button-submit').attr('id','btnSaveBlock').attr('name','btnSaveBlock').attr('onclick','onSubmitBlock(this)');
 			$('.button-submit').html('{{trans("lang.save")}}');
 			$('.system-modal').modal('show');
+			$('.parent_id').hide();
 		});
 
 		function onSubmitBlock(field){
@@ -641,6 +667,7 @@
 			$('.button-submit').attr('id','btnSaveBlockEdit').attr('name','btnSaveBlockEdit').attr('onclick','onSubmitBlockEdit(this)');
 			$('.button-submit').html('{{trans("lang.save")}}');
 			$('.system-modal').modal('show');
+			$('.parent_id').hide();
 		});
 
 		function onSubmitBlockEdit(field){
@@ -690,6 +717,7 @@
 			$('.button-submit').attr('id','btnSaveStreet').attr('name','btnSaveStreet').attr('onclick','onSubmitStreet(this)');
 			$('.button-submit').html('{{trans("lang.save")}}');
 			$('.system-modal').modal('show');
+			$('.parent_id').hide();
 		});
 
 		function onSubmitStreet(field){
@@ -736,6 +764,7 @@
 			$('.button-submit').attr('id','btnSaveStreetEdit').attr('name','btnSaveStreetEdit').attr('onclick','onSubmitStreetEdit(this)');
 			$('.button-submit').html('{{trans("lang.save")}}');
 			$('.system-modal').modal('show');
+			$('.parent_id').hide();
 		});
 
 		function onSubmitStreetEdit(field){
@@ -785,6 +814,7 @@
 			$('.button-submit').attr('id','btnSaveHouseType').attr('name','btnSaveHouseType').attr('onclick','onSubmitHouseType(this)');
 			$('.button-submit').html('{{trans("lang.save")}}');
 			$('.system-modal').modal('show');
+			$('.parent_id').hide();
 		});
 
 		function onSubmitHouseType(field){
@@ -831,6 +861,7 @@
 			$('.button-submit').attr('id','btnSaveHouseTypeEdit').attr('name','btnSaveHouseTypeEdit').attr('onclick','onSubmitHouseTypeEdit(this)');
 			$('.button-submit').html('{{trans("lang.save")}}');
 			$('.system-modal').modal('show');
+			$('.parent_id').hide();
 		});
 
 		function onSubmitHouseTypeEdit(field){

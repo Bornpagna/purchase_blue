@@ -160,10 +160,105 @@
 								<!-- Label -->
 								<label for="status" class="control-label" style="text-align: left;"><strong>{{ trans('lang.note') }}</strong></label>
 								<!-- Textarea -->
-								<textarea class="form-control trans_desc" id="trans_desc" name="desc" length="100" rows="8" placeholder="{{ trans('lang.enter_text') }}"></textarea>
+								<input type="text" class="form-control trans_desc" id="trans_desc" name="desc" length="100" rows="8" placeholder="{{ trans('lang.enter_text') }}" />
+							</div>
+						</div>
+
+						<div class="col-md-12 card">
+							<div class="form-group">
+								<!-- Label -->
+								<label for="status" class="control-label" style="text-align: left;"><strong>{{ trans('lang.load_item_from_boq') }}</strong></label>
+								<!-- Textarea -->
+							</div>
+
+							<div class="col-12">
+								<div class="col-md-4">
+									<div class="form-group">
+										<label for="boq-zone" class="col-md-12 bold">{{trans('lang.zone')}} 
+										</label>
+										<div class="col-md-12">
+											<select name="zone_id" id="boq-zone" class="form-control boq-zone select2">
+												<option value=""></option>
+												{{getSystemData('ZN')}}
+											</select>
+											<span class="help-block font-red bold"></span>
+										</div>
+									</div>
+								</div>
+	
+								<div class="col-md-4">
+									<div class="form-group">
+										<label for="boq-block" class="col-md-12 bold">{{trans('lang.block')}} 
+										</label>
+										<div class="col-md-12">
+											<select name="block_id" id="boq-block" class="form-control boq-block select2">
+												<option value=""></option>
+												{{getSystemData('BK')}}
+											</select>
+											<span class="help-block font-red bold"></span>
+										</div>
+									</div>
+								</div>
+								<div class="col-md-4">
+									<div class="form-group">
+										<label for="boq-building" class="col-md-12 bold">{{trans('lang.building')}} 
+										</label>
+										<div class="col-md-12">
+											<select name="building_id" id="boq-building" class="form-control boq-building select2">
+												<option value=""></option>
+												{{getSystemData('BD')}}
+											</select>
+											<span class="help-block font-red bold"></span>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="col-12">
+								<div class="col-md-4">
+									<div class="form-group">
+										<label for="boq-street" class="col-md-12 bold">{{trans('lang.street')}} 
+										</label>
+										<div class="col-md-12">
+											<select name="street_id" id="boq-street" class="form-control boq-street select2">
+												<option value=""></option>
+												{{getSystemData('ST')}}
+											</select>
+											<span class="help-block font-red bold"></span>
+										</div>
+									</div>
+								</div>
+								<div class="col-md-4">
+									<div class="form-group">
+										<label for="boq-house-type" class="col-md-12 bold">{{trans('lang.house_type')}} 
+										</label>
+										<div class="col-md-12">
+											<select name="house_type_id" id="boq-house-type" class="form-control boq-house-type select2">
+												<option value=""></option>
+												{{getSystemData('HT')}}
+											</select>
+											<span class="help-block font-red bold"></span>
+										</div>
+									</div>
+								</div>
+								<div class="col-md-4">
+									<div class="form-group">
+										<label for="boq-house" class="col-md-12 bold " id="label-house">{{trans('lang.house_no')}}
+										</label>
+										<div class="col-md-12 boq-house-wrapper">
+											<select name="house[]" id="boq-house" class="form-control boq-house select2" multiple>
+											
+											</select>
+											<span class="help-block font-red bold"></span>
+										</div>
+									</div>
+								</div>
+								<div class="form-actions text-right">
+									<a class="btn blue bold" id="load-boq-item">{{trans('lang.load_item')}}</a>
+								</div>
 							</div>
 						</div>
 					</div>
+					
 					<!-- Item Table -->
 					<div class="portlet-body">
 						<div class="table-scrollable">
@@ -174,6 +269,8 @@
 										<th width="20%" class="text-center all">{{ trans('lang.items') }}</th>
 										<th width="10%" class="text-center all">{{ trans('lang.size') }}</th>
 										<th width="15%" class="text-center all">{{ trans('lang.units') }}</th>
+										<th width="10%" class="text-center all">{{ trans('lang.qty_in_stock') }}</th>
+										<th width="10%" class="text-center all">{{ trans('lang.remain_request') }}</th>
 										<th width="15%" class="text-center all">{{ trans('lang.qty') }}</th>
 										<th width="15%" class="text-center all">{{ trans('lang.note') }}</th>
 										<th width="15%" class="text-center all">{{ trans('lang.remark') }}</th>
@@ -399,6 +496,8 @@
 				'		<option value=""></option>'+
 				'	</select>'+
 				'</td>'+
+				'<td><input class="form-control qty_in_stock qty_in_stock_'+data.id+'" readonly="readonly" name="qty_in_stock[]" value="'+data.stock_qty+'"/></td>'+
+				'<td><input class="form-control remain_request remain_request_'+data.id+'" readonly="readonly" value="'+data.boq_set+'" name="boq_qty_remain[]"/></td>'+
 				'<td>'+
 				'	<input type="number" length="50" step="any" class="form-control noscroll line_qty line_qty_'+data.id+'" onkeyup="enterQtyRequest(this, '+data.id+', '+data.qty+')"  name="line_qty[]" placeholder="{{trans('lang.enter_text')}}"/>'+
 				'	<input type="hidden" class="form-control line_boq_set line_boq_set_'+data.id+'" name="line_boq_set[]"/>'+

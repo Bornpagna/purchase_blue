@@ -51,6 +51,7 @@ class HouseController extends Controller
 		if(hasRole('house_upload')){
 			$data = array_merge($data, ['rounteUploade'	=> url('house/excel/upload')]);
 		}
+		$data = array_merge($data, ['rounteUploadeUpdate'	=> url('house/excel/uploadUpdateHouse')]);
 		return view('house.index',$data);
 	}
 	
@@ -73,6 +74,12 @@ class HouseController extends Controller
 		})
 		->addColumn('block',function($row){
 			if($block = SystemData::find($row->block_id)){
+				return $block->name;
+			}
+			return '';
+		})
+		->addColumn('building',function($row){
+			if($block = SystemData::find($row->building_id)){
 				return $block->name;
 			}
 			return '';
@@ -308,18 +315,12 @@ class HouseController extends Controller
    			$excel->sheet('house',function($sheet){
    				$sheet->cell('A1','House No');
    				$sheet->cell('B1','House Type');
-				$sheet->cell('C1','Street');
-   				$sheet->cell('D1','Street');
-   				$sheet->cell('E1','Description');
-   				$sheet->cell('F1','Status');
-				if(getSetting()->allow_zone==1 && getSetting()->allow_block==1){
-					$sheet->cell('G1','Zone');
-					$sheet->cell('H1','Block');
-				}else if(getSetting()->allow_zone==1){
-					$sheet->cell('G1','Zone');
-				}else if(getSetting()->allow_block==1){
-					$sheet->cell('H1','Block');
-				}
+				$sheet->cell('C1','Zone');
+				$sheet->cell('D1','Block');
+				$sheet->cell('E1','Building');
+				$sheet->cell('F1','Street');
+   				$sheet->cell('G1','Status');
+   				$sheet->cell('H1','Description');
 				$stat = [1=>'Starting',2=>'Finished',3=>'Stopped'];
 				$pro_id = Session::get('project');
 				$sql = "SELECT 
@@ -327,16 +328,12 @@ class HouseController extends Controller
 						  pr_houses.`house_no`,
 						  pr_houses.`house_desc`,
 						  pr_houses.`house_type`,
-						  (SELECT pr_system_datas.`name` FROM pr_system_datas WHERE `pr_system_datas`.`id`=pr_houses.`house_type`)AS house_type_desc,
-						  `pr_houses`.`zone_id`,
 						  (SELECT pr_system_datas.`name` FROM pr_system_datas WHERE pr_system_datas.`id`=pr_houses.`zone_id`) AS zone,
-						  pr_houses.`block_id`,
 						  (SELECT pr_system_datas.`name` FROM pr_system_datas WHERE pr_system_datas.`id`=pr_houses.`block_id`) AS block,
-						  pr_houses.`building_id`,
 						  (SELECT pr_system_datas.`name` FROM pr_system_datas WHERE pr_system_datas.`id`=pr_houses.`building_id`) AS building,
-						  pr_houses.`street_id`,
 						  (SELECT pr_system_datas.`name` FROM pr_system_datas WHERE pr_system_datas.`id`=pr_houses.`street_id`) AS street,
-						  pr_houses.`status`
+						  pr_houses.`status`,
+						  (SELECT pr_system_datas.`name` FROM pr_system_datas WHERE `pr_system_datas`.`id`=pr_houses.`house_type`)AS house_type_desc
 						FROM pr_houses WHERE pr_houses.`pro_id`='$pro_id'";
 				$data = DB::select($sql);
 				if(count($data)>0){
@@ -344,17 +341,13 @@ class HouseController extends Controller
    					foreach ($data as $value) {
 	   					$sheet->cell('A'.($key+2),$value->house_no);
 	   					$sheet->cell('B'.($key+2),$value->house_type_desc);
-	   					$sheet->cell('C'.($key+2),$value->street);
-	   					$sheet->cell('D'.($key+2),$value->house_desc);
-	   					$sheet->cell('E'.($key+2),isset($stat[$value->status])?$stat[$value->status]:'Stopped');
-						if(getSetting()->allow_zone==1 && getSetting()->allow_block==1){
-							$sheet->cell('F'.($key+2),$value->zone);
-							$sheet->cell('G'.($key+2),$value->block);
-						}else if(getSetting()->allow_zone==1){
-							$sheet->cell('F'.($key+2),$value->zone);
-						}else if(getSetting()->allow_block==1){
-							$sheet->cell('F'.($key+2),$value->block);
-						}
+	   					$sheet->cell('C'.($key+2),$value->zone);
+	   					$sheet->cell('D'.($key+2),$value->block);
+						$sheet->cell('E'.($key+2),$value->building);
+						$sheet->cell('F'.($key+2),$value->street);
+						$sheet->cell('G'.($key+2),isset($stat[$value->status])?$stat[$value->status]:'Stopped');
+						$sheet->cell('H'.($key+2),$value->house_desc);
+						
 						$key++;
 	   				}
    				}
@@ -371,59 +364,124 @@ class HouseController extends Controller
 			if(!$request->hasFile('excel')){
 				throw new \Exception("No file selected.");
 			}
-
 			if(!$excel_select = $request->file('excel')){
 				throw new \Exception("No excel file was created.");
 			}
-
 			if(!$data = Excel::load($excel_select->getRealPath(), function($reader) {})->get()){
 				throw new \Exception("This excel file no content.");
 			}
-
 			if(empty($data)){
 				throw new \Exception("This excel is empty.");
 			}
-			
 			$pro_id = $request->session()->get('project');
-
 			$stat = ["Starting"=>1,"Finished"=>2,"Stopped"=>3];
-
 			foreach($data as $index => $row){
 				$cellCount = $index + 1;
-
 				if(empty($row->house_no)){
 					throw new \Exception("Column[A{$cellCount}] is empty");
 				}
-
 				if(empty($row->house_type)){
 					throw new \Exception("Column[B{$cellCount}] is empty");
 				}
-
 				if(empty($row->street)){
 					throw new \Exception("Column[C{$cellCount}] is empty");
 				}
-
 				if(empty($row->description)){
 					throw new \Exception("Column[D{$cellCount}] is empty");
 				}
-
 				if(empty($row->status)){
 					throw new \Exception("Column[E{$cellCount}] is empty");
 				}
+				// if(getSetting()->allow_zone == 1){
+				if(empty($row->zone)){
+					throw new \Exception("Column Zone[{$cellCount}] is empty");
+				}
+				// }
 
-				if(getSetting()->allow_zone == 1){
-					if(empty($row->zone)){
-						throw new \Exception("Column Zone[{$cellCount}] is empty");
+				// if(getSetting()->allow_block == 1){
+				if(empty($row->block)){
+					throw new \Exception("Column Block[{$cellCount}] is empty");
+				}
+				// }
+				if(empty($row->building)){
+					throw new \Exception("Column Block[{$cellCount}] is empty");
+				}
+				
+
+				if(!$street = SystemData::where(['name'=> $row->street,'type'=> 'ST'])->first()){
+					$columnStreet = [
+						'name' 		 => $row->street,
+						'desc' 		 => $row->street,
+						'type' 		 => 'ST',
+						'parent_id'  => $pro_id,
+						'created_by' => Auth::user()->id,
+						'created_at' => date('Y-m-d H:i:s'),
+						'updated_by' => Auth::user()->id,
+						'updated_at' => date('Y-m-d H:i:s')
+					];
+					if(!$streetID = DB::table('system_datas')->insertGetId($columnStreet)){
+						DB::rollback();
+						throw new \Exception("Street wan\'t insert at Column[C{$cellCount}].");
 					}
+
+					$street = SystemData::find($streetID);
+				}
+				if(!$zone = SystemData::where(['name'=> $row->zone,'type'=> 'ZN'])->first()){
+					$columnZone = [
+						'name' 		 => $row->zone,
+						'desc' 		 => $row->zone,
+						'type' 		 => 'ZN',
+						'parent_id'  => $pro_id,
+						'created_by' => Auth::user()->id,
+						'created_at' => date('Y-m-d H:i:s'),
+						'updated_by' => Auth::user()->id,
+						'updated_at' => date('Y-m-d H:i:s')
+					];
+					if(!$zoneID = DB::table('system_datas')->insertGetId($columnZone)){
+						DB::rollback();
+						throw new \Exception("Zone wan\'t insert at Row[{$cellCount}].");
+					}
+					$zone = SystemData::find($zoneID);
+				}
+				if(!$block = SystemData::where(['name'=> $row->block,'type'=> 'BK'])->first()){
+					$columnBlock = [
+						'name' 		 => $row->block,
+						'desc' 		 => $row->block,
+						'type' 		 => 'BK',
+						'parent_id'  => $pro_id,
+						'created_by' => Auth::user()->id,
+						'created_at' => date('Y-m-d H:i:s'),
+						'updated_by' => Auth::user()->id,
+						'updated_at' => date('Y-m-d H:i:s')
+					];
+					if(!$blockID = DB::table('system_datas')->insertGetId($columnBlock)){
+						DB::rollback();
+						throw new \Exception("Block wan\'t insert at Row[{$cellCount}].");
+					}
+					$block = SystemData::find($blockID);
 				}
 
-				if(getSetting()->allow_block == 1){
-					if(empty($row->block)){
-						throw new \Exception("Column Block[{$cellCount}] is empty");
+				if(!$building = SystemData::where(['name'=> $row->building,'type'=> 'BD'])->first()){
+					$columnBlock = [
+						'name' 		 => $row->building,
+						'desc' 		 => $row->building,
+						'type' 		 => 'BD',
+						'parent_id'  => $pro_id,
+						'created_by' => Auth::user()->id,
+						'created_at' => date('Y-m-d H:i:s'),
+						'updated_by' => Auth::user()->id,
+						'updated_at' => date('Y-m-d H:i:s')
+					];
+					if(!$buildingID = DB::table('system_datas')->insertGetId($columnBlock)){
+						DB::rollback();
+						throw new \Exception("Block wan\'t insert at Row[{$cellCount}].");
 					}
+					$building = SystemData::find($buildingID);
 				}
 
-				if(!$house = House::where(['house_no' => $row->house_no])->first()){
+				
+				$house = House::where(['house_no' => $row->house_no])->where('zone_id',$zone->id)->where('block_id',$block->id)->where('building_id',$building->id)->first();
+				if(!$house){
 					if(!$houseType = SystemData::where(['name'=> $row->house_type,'type'=> 'HT'])->first()){
 						$columnHouseType = [
 							'name' 		 => $row->house_type,
@@ -439,29 +497,8 @@ class HouseController extends Controller
 							DB::rollback();
 							throw new \Exception("House Type wan\'t insert at Column[B{$cellCount}].");
 						}
-
 						$houseType = SystemData::find($houseTypeID);
 					}
-
-					if(!$street = SystemData::where(['name'=> $row->street,'type'=> 'ST'])->first()){
-						$columnStreet = [
-							'name' 		 => $row->street,
-							'desc' 		 => $row->street,
-							'type' 		 => 'ST',
-							'parent_id'  => $pro_id,
-							'created_by' => Auth::user()->id,
-							'created_at' => date('Y-m-d H:i:s'),
-							'updated_by' => Auth::user()->id,
-							'updated_at' => date('Y-m-d H:i:s')
-						];
-						if(!$streetID = DB::table('system_datas')->insertGetId($columnStreet)){
-							DB::rollback();
-							throw new \Exception("Street wan\'t insert at Column[C{$cellCount}].");
-						}
-
-						$street = SystemData::find($streetID);
-					}
-
 					$columnHouse = [
 						'house_no' 	 => $row->house_no,
 						'house_desc' => $row->house_no,
@@ -474,52 +511,10 @@ class HouseController extends Controller
 						'updated_by' => Auth::user()->id,
 						'updated_at' => date('Y-m-d H:i:s')
 					];
-
-					if(getSetting()->allow_zone == 1){
-						if(!$zone = SystemData::where(['name'=> $row->zone,'type'=> 'ZN'])->first()){
-							$columnZone = [
-								'name' 		 => $row->zone,
-								'desc' 		 => $row->zone,
-								'type' 		 => 'ZN',
-								'parent_id'  => $pro_id,
-								'created_by' => Auth::user()->id,
-								'created_at' => date('Y-m-d H:i:s'),
-								'updated_by' => Auth::user()->id,
-								'updated_at' => date('Y-m-d H:i:s')
-							];
-							if(!$zoneID = DB::table('system_datas')->insertGetId($columnZone)){
-								DB::rollback();
-								throw new \Exception("Zone wan\'t insert at Row[{$cellCount}].");
-							}
-	
-							$zone = SystemData::find($zoneID);
-						}
-
-						$columnHouse = array_merge($columnHouse,['zone_id' => $zone->id]);
-					}
-
-					if(getSetting()->allow_block == 1){
-						if(!$block = SystemData::where(['name'=> $row->block,'type'=> 'BK'])->first()){
-							$columnBlock = [
-								'name' 		 => $row->block,
-								'desc' 		 => $row->block,
-								'type' 		 => 'BK',
-								'parent_id'  => $pro_id,
-								'created_by' => Auth::user()->id,
-								'created_at' => date('Y-m-d H:i:s'),
-								'updated_by' => Auth::user()->id,
-								'updated_at' => date('Y-m-d H:i:s')
-							];
-							if(!$blockID = DB::table('system_datas')->insertGetId($columnBlock)){
-								DB::rollback();
-								throw new \Exception("Block wan\'t insert at Row[{$cellCount}].");
-							}
-	
-							$block = SystemData::find($blockID);
-						}
-
-						$columnHouse = array_merge($columnHouse,['block_id' => $block->id]);
-					}
+					$columnHouse = array_merge($columnHouse,['block_id' => $block->id]);
+					$columnHouse = array_merge($columnHouse,['zone_id' => $zone->id]);
+					$columnHouse = array_merge($columnHouse,['block_id' => $block->id]);
+					$columnHouse = array_merge($columnHouse,['building_id' => $building->id]);
 
 					if(!$houseID = DB::table('houses')->insertGetId($columnHouse)){
 						DB::rollback();
@@ -835,4 +830,199 @@ class HouseController extends Controller
 			return redirect('house')->with("error", $ex->getMessage());
 		}
 	}
+
+	public function uploadExcelUpdateHouse(Request $request)
+   	{
+		try{
+			ini_set('max_execution_time', 0);
+			DB::beginTransaction();
+			// check exist file
+			if(!$request->hasFile('excel')){
+				throw new \Exception("No file selected.");
+			}
+			if(!$excel_select = $request->file('excel')){
+				throw new \Exception("No excel file was created.");
+			}
+			if(!$data = Excel::load($excel_select->getRealPath(), function($reader) {})->get()){
+				throw new \Exception("This excel file no content.");
+			}
+			if(empty($data)){
+				throw new \Exception("This excel is empty.");
+			}
+			$pro_id = $request->session()->get('project');
+			$stat = ["Starting"=>1,"Finished"=>2,"Stopped"=>3];
+			foreach($data as $index => $row){
+				$cellCount = $index + 1;
+				if(empty($row->house_no)){
+					throw new \Exception("Column[A{$cellCount}] is empty");
+				}
+				if(empty($row->house_type)){
+					throw new \Exception("Column[B{$cellCount}] is empty");
+				}
+				if(empty($row->street)){
+					throw new \Exception("Column[C{$cellCount}] is empty");
+				}
+				
+				
+				if(empty($row->description)){
+					throw new \Exception("Column[D{$cellCount}] is empty");
+				}
+				if(empty($row->status)){
+					throw new \Exception("Column[E{$cellCount}] is empty");
+				}
+				// if(getSetting()->allow_zone == 1){
+				if(empty($row->zone)){
+					throw new \Exception("Column Zone[{$cellCount}] is empty");
+				}
+				// }
+
+				// if(getSetting()->allow_block == 1){
+				if(empty($row->block)){
+					throw new \Exception("Column Block[{$cellCount}] is empty");
+				}
+				// }
+				if(empty($row->building)){
+					throw new \Exception("Column Block[{$cellCount}] is empty");
+				}
+				
+
+				if(!$street = SystemData::where(['name'=> $row->street,'type'=> 'ST'])->first()){
+					$columnStreet = [
+						'name' 		 => $row->street,
+						'desc' 		 => $row->street,
+						'type' 		 => 'ST',
+						'parent_id'  => $pro_id,
+						'created_by' => Auth::user()->id,
+						'created_at' => date('Y-m-d H:i:s'),
+						'updated_by' => Auth::user()->id,
+						'updated_at' => date('Y-m-d H:i:s')
+					];
+					if(!$streetID = DB::table('system_datas')->insertGetId($columnStreet)){
+						DB::rollback();
+						throw new \Exception("Street wan\'t insert at Column[C{$cellCount}].");
+					}
+
+					$street = SystemData::find($streetID);
+				}
+				if(!$zone = SystemData::where(['name'=> $row->zone,'type'=> 'ZN'])->first()){
+					$columnZone = [
+						'name' 		 => $row->zone,
+						'desc' 		 => $row->zone,
+						'type' 		 => 'ZN',
+						'parent_id'  => $pro_id,
+						'created_by' => Auth::user()->id,
+						'created_at' => date('Y-m-d H:i:s'),
+						'updated_by' => Auth::user()->id,
+						'updated_at' => date('Y-m-d H:i:s')
+					];
+					if(!$zoneID = DB::table('system_datas')->insertGetId($columnZone)){
+						DB::rollback();
+						throw new \Exception("Zone wan\'t insert at Row[{$cellCount}].");
+					}
+					$zone = SystemData::find($zoneID);
+				}
+				if(!$block = SystemData::where(['name'=> $row->block,'type'=> 'BK'])->first()){
+					$columnBlock = [
+						'name' 		 => $row->block,
+						'desc' 		 => $row->block,
+						'type' 		 => 'BK',
+						'parent_id'  => $pro_id,
+						'created_by' => Auth::user()->id,
+						'created_at' => date('Y-m-d H:i:s'),
+						'updated_by' => Auth::user()->id,
+						'updated_at' => date('Y-m-d H:i:s')
+					];
+					if(!$blockID = DB::table('system_datas')->insertGetId($columnBlock)){
+						DB::rollback();
+						throw new \Exception("Block wan\'t insert at Row[{$cellCount}].");
+					}
+					$block = SystemData::find($blockID);
+				}
+
+				if(!$building = SystemData::where(['name'=> $row->building,'type'=> 'BD'])->first()){
+					$columnBlock = [
+						'name' 		 => $row->building,
+						'desc' 		 => $row->building,
+						'type' 		 => 'BD',
+						'parent_id'  => $pro_id,
+						'created_by' => Auth::user()->id,
+						'created_at' => date('Y-m-d H:i:s'),
+						'updated_by' => Auth::user()->id,
+						'updated_at' => date('Y-m-d H:i:s')
+					];
+					if(!$buildingID = DB::table('system_datas')->insertGetId($columnBlock)){
+						DB::rollback();
+						throw new \Exception("Block wan\'t insert at Row[{$cellCount}].");
+					}
+					$building = SystemData::find($buildingID);
+				}
+				if(!$houseType = SystemData::where(['name'=> $row->house_type,'type'=> 'HT'])->first()){
+					$columnHouseType = [
+						'name' 		 => $row->house_type,
+						'desc' 		 => $row->house_type,
+						'type' 		 => 'HT',
+						'parent_id'  => $pro_id,
+						'created_by' => Auth::user()->id,
+						'created_at' => date('Y-m-d H:i:s'),
+						'updated_by' => Auth::user()->id,
+						'updated_at' => date('Y-m-d H:i:s')
+					];
+					if(!$houseTypeID = DB::table('system_datas')->insertGetId($columnHouseType)){
+						DB::rollback();
+						throw new \Exception("House Type wan\'t insert at Column[B{$cellCount}].");
+					}
+					$houseType = SystemData::find($houseTypeID);
+				}
+				
+				$house = House::where(['house_no' => $row->house_no])->first();
+				if(!$house){
+					$columnHouse = [
+						'house_no' 	 => $row->house_no,
+						'house_desc' => $row->house_no,
+						'house_type' => $houseType->id,
+						'pro_id' 	 => $pro_id,
+						'street_id'  => $street->id,
+						'status'     => $stat[$row->status],
+						'created_by' => Auth::user()->id,
+						'created_at' => date('Y-m-d H:i:s'),
+						'updated_by' => Auth::user()->id,
+						'updated_at' => date('Y-m-d H:i:s')
+					];
+					$columnHouse = array_merge($columnHouse,['zone_id' => $zone->id]);
+					$columnHouse = array_merge($columnHouse,['block_id' => $block->id]);
+					$columnHouse = array_merge($columnHouse,['building_id' => $building->id]);
+
+					if(!$houseID = DB::table('houses')->insertGetId($columnHouse)){
+						DB::rollback();
+						throw new \Exception("House wan\'t insert.");
+					}
+				}else{
+					$columnHouse = [
+						'house_desc' => $row->house_no,
+						'house_type' => $houseType->id,
+						'pro_id' 	 => $pro_id,
+						'street_id'  => $street->id,
+						'status'     => $stat[$row->status],
+						'created_by' => Auth::user()->id,
+						'created_at' => date('Y-m-d H:i:s'),
+						'updated_by' => Auth::user()->id,
+						'updated_at' => date('Y-m-d H:i:s')
+					];
+					$columnHouse = array_merge($columnHouse,['zone_id' => $zone->id]);
+					$columnHouse = array_merge($columnHouse,['block_id' => $block->id]);
+					$columnHouse = array_merge($columnHouse,['building_id' => $building->id]);
+
+					if(!$houseID = DB::table('houses')->where('id',$house->id)->update($columnHouse)){
+						DB::rollback();
+						throw new \Exception("House wan\'t insert.");
+					}
+				}
+			}
+			DB::commit();
+			return redirect('house')->with("success", trans('lang.upload_success'));
+		}catch(\Exception $ex){
+			DB::rollback();
+			return redirect('house')->with("error", $ex->getMessage());
+		}
+   	}
 }

@@ -276,12 +276,17 @@ class ItemsController extends Controller
 			$path = $request->file('excel')->getRealPath();
 			$data = Excel::load($path, function($reader) {})->get();
 			$pro_id = $request->session()->get('project');
-			$error = '';
+			$error = [];
+			
 			if(!empty($data) && $data->count()){
+				
 				foreach ($data as $key => $value) {
+					
 					// var_dump(count($value));exit;
 					// if (count($value)==9) {
-						if (($value->item_code) && ($value->item_name) && ($value->category) && ($value->description) && ($value->unit_stock) && ($value->unit_usage) && ($value->unit_purch) && ($value->purch_price) && ($value->alert_qty) && ($value->status)) {
+						
+						if (($value->item_code) && ($value->item_name) && ($value->category) && ($value->description) && ($value->unit_stock) && ($value->unit_usage) && ($value->unit_purch) ) {
+							
 							if (count(DB::table('items')->where('code','=',$value->item_code)->get(['id'])->toArray())==0) {
 								$insert[] = [
 									'code'		=>$value->item_code,
@@ -291,7 +296,7 @@ class ItemsController extends Controller
 									'unit_stock'=>$value->unit_stock,
 									'unit_usage'=>$value->unit_usage,									
 									'unit_purch'=>$value->unit_purch,
-									'cost_purch'=>$value->purch_price,
+									'cost_purch'=>$value->purch_price ? $value->purch_price : 0,
 									'alert_qty'=>$value->alert_qty,
 									'status'=>($value->status)=="Active"?1:0,
 									'created_by'=>Auth::user()->id,

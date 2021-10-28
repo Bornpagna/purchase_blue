@@ -36,6 +36,7 @@ class ItemTypeController extends Controller
 				],
 			],			
 			'rounte'		=> url("item_type/dt"),
+			'types'			=> 'item_type',
 		];
 		
 		if(hasRole('item_type_add')){
@@ -57,11 +58,13 @@ class ItemTypeController extends Controller
 				  `pr_system_datas`.`name`,
 				  `pr_system_datas`.`desc`,
 				  `pr_system_datas`.`status`,
-				  `pr_system_datas`.`type` 
+				  `pr_system_datas`.`type` ,
+				  `pr_system_datas`.`parent` ,
+				  (SELECT parent_table.name FROM pr_system_datas AS parent_table WHERE parent_table.id = pr_system_datas.parent) AS parent_name
 				FROM
 				  `pr_system_datas` 
 				WHERE `pr_system_datas`.`status` = '1' 
-				  AND `pr_system_datas`.`type` = '".self::SYSTEM_TYPE."'";
+				  AND `pr_system_datas`.`type` = '".self::SYSTEM_TYPE."' order by pr_system_datas.parent";
         return Datatables::of(DB::select($sql))
 		->addColumn('action', function ($row) {			
 			$rounte_boq = url('item_type/upload/'.$row->id);
@@ -98,6 +101,7 @@ class ItemTypeController extends Controller
 		DB::beginTransaction();
 		try {
 			$data = [
+				'parent'	=>$request->parent_id == "" ? 0 : $request->parent_id,
 				'name'		=>$request->name,
 				'desc'		=>$request->desc,
 				'type'		=>self::SYSTEM_TYPE,
@@ -128,6 +132,7 @@ class ItemTypeController extends Controller
     	DB::beginTransaction();
 		try {
 			$data = [
+				'parent'	=>$request->parent_id == "" ? 0 : $request->parent_id,
 				'name'		=>$request->name,
 				'desc'		=>$request->desc,
 				'type'		=>self::SYSTEM_TYPE,

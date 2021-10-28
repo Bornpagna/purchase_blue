@@ -1,5 +1,9 @@
 <?php
 use App\Model\Setting;
+use App\Model\Boq;
+use App\Model\BoqHouse;
+use App\Model\BoqItem;
+use App\Model\SystemData;
 use Illuminate\Support\Facades\Session;
 use Intervention\Image\ImageManagerStatic as Image;
 
@@ -15,9 +19,9 @@ function getAllocateRef($ref){
 	return $ref;
 }
 
-function getMinQTY($item_id,$unit,$requestQty=0)
+function getMinQTY($item_id,$unit,$requestQty=0,$requestPrice = 0)
 {
-	$sql = "SELECT a.*, ($requestQty * a.unit_qty) AS qty FROM (SELECT (CASE WHEN (SELECT `pr_units`.`factor` FROM `pr_units` WHERE pr_units.`from_code` = '$unit'AND pr_units.`to_code` = (SELECT pr_items.`unit_stock` FROM pr_items WHERE pr_items.`id` = $item_id)) != ''THEN (SELECT `pr_units`.`factor` FROM `pr_units` WHERE pr_units.`from_code` = '$unit'AND pr_units.`to_code` = (SELECT pr_items.`unit_stock` FROM pr_items WHERE pr_items.`id` = $item_id)) ELSE 1 END ) AS unit_qty, (SELECT pr_units.`to_code` FROM pr_units WHERE pr_units.`from_code` = (SELECT pr_items.`unit_stock` FROM pr_items WHERE pr_items.`id` = $item_id) AND pr_units.`to_code` = (SELECT pr_units.`to_code` FROM pr_units WHERE pr_units.`from_code` = '$unit'AND pr_units.`factor` = (SELECT MIN(pr_units.`factor`) FROM pr_units WHERE pr_units.`from_code` = '$unit') LIMIT 1)) AS min_unit_to_code) AS a "; 
+	$sql = "SELECT a.*, ($requestQty * a.unit_qty) AS qty, ($requestPrice / a.unit_qty) AS price FROM (SELECT (CASE WHEN (SELECT `pr_units`.`factor` FROM `pr_units` WHERE pr_units.`from_code` = '$unit'AND pr_units.`to_code` = (SELECT pr_items.`unit_stock` FROM pr_items WHERE pr_items.`id` = $item_id)) != ''THEN (SELECT `pr_units`.`factor` FROM `pr_units` WHERE pr_units.`from_code` = '$unit'AND pr_units.`to_code` = (SELECT pr_items.`unit_stock` FROM pr_items WHERE pr_items.`id` = $item_id)) ELSE 1 END ) AS unit_qty, (SELECT pr_units.`to_code` FROM pr_units WHERE pr_units.`from_code` = (SELECT pr_items.`unit_stock` FROM pr_items WHERE pr_items.`id` = $item_id) AND pr_units.`to_code` = (SELECT pr_units.`to_code` FROM pr_units WHERE pr_units.`from_code` = '$unit'AND pr_units.`factor` = (SELECT MIN(pr_units.`factor`) FROM pr_units WHERE pr_units.`from_code` = '$unit') LIMIT 1)) AS min_unit_to_code) AS a "; 
 
 	$result = collect(DB::select(DB::raw($sql)))->first();
 
@@ -28,7 +32,7 @@ function getMinQTY($item_id,$unit,$requestQty=0)
 	}
 }
 
-function getItemCost($item_id,$unit,$requestQty=0)
+function getItemCost($item_id,$unit,$requestQty=0,$requestPrice = 0)
 {
 	$costing         = [];
 	$subtract        = 0;
@@ -39,7 +43,8 @@ function getItemCost($item_id,$unit,$requestQty=0)
 	$qty             = 0;
 	$pro_id          = Session::get('project');
 	$StockAccount    = getSetting()->stock_account;
-	$MinQTY          = (array) getMinQTY($item_id,$unit,$requestQty);
+	$MinQTY          = (array) getMinQTY($item_id,$unit,$requestQty,$requestPrice);
+	$unit_qty = 1;
 
 	if ($StockAccount=="FIFO") {
 		$sql  = "CALL COSTING_FIFO({$pro_id},{$item_id});";
@@ -51,11 +56,17 @@ function getItemCost($item_id,$unit,$requestQty=0)
 		if ($MinQTY["min_unit_to_code"]) {
 			$unit = $MinQTY["min_unit_to_code"];
 		}
+		if($MinQTY["unit_qty"]){
+			$unit_qty = $MinQTY["unit_qty"];
+		}
 		$requestQty = $MinQTY["qty"];
+		$requestPrice = $MinQTY["price"];
 	}
+	// print_r($MinQTY);
 
 	if (getSetting()->is_costing==1) {
 		$CostingRs = DB::select($sql);
+		
 		if (count($CostingRs) > 0) {
 			if ($StockAccount=='FIFO') {
 				foreach ($CostingRs as $ck => $CostingRs) {
@@ -75,11 +86,16 @@ function getItemCost($item_id,$unit,$requestQty=0)
 							'unit'         =>$CostingRs->unit,
 							'cost'         =>$CostingRs->cost,
 							'warehouse_id' =>$CostingRs->warehouse_id,
-							'type_'        =>$CostingRs->type_
+							'type_'        =>$CostingRs->type_,
+							'remain_qty'   =>$CostingRs->remain_qty,
+							'stock_id'     =>$CostingRs->stock_id,
+							'original_cost'         =>$CostingRs->original_cost,
+							'unit_qty'		=>	$unit_qty,
+							'request_qty'	=>  $requestQty
 						];
 					}
 				}
-
+				
 				if (count($additionalArray) > 0) {
 					$min_key = min(array_keys($additionalArray));
 					$max_key = max(array_keys($additionalArray));
@@ -87,7 +103,7 @@ function getItemCost($item_id,$unit,$requestQty=0)
 				}else{
 					$qty = $qty - $subtract;
 				}
-				
+				// print_r($additionalArray);exit;
 				subtractOld : {
 					if ($qty < 0) {
 						$min_key++;
@@ -104,7 +120,13 @@ function getItemCost($item_id,$unit,$requestQty=0)
 									'unit'         =>$additionalArray[$min_key-1]['unit'],
 									'cost'         =>$additionalArray[$min_key-1]['cost'],
 									'warehouse_id' =>$additionalArray[$min_key-1]['warehouse_id'],
-									'type_'        =>$additionalArray[$min_key-1]['type_']
+									'type_'        =>$additionalArray[$min_key-1]['type_'],
+									'remain_qty'   =>$additionalArray[$min_key-1]['remain_qty'],
+									'stock_id'     =>$additionalArray[$min_key-1]['stock_id'],
+									'mainCost'	=> $additionalArray[$min_key-1]['main_cost'],
+									'original_cost'	=> $additionalArray[$min_key-1]['original_cost'],
+									'unit_qty'		=>	$additionalArray[$min_key-1]['unit_qty'],
+									'request_qty'	=>  $additionalArray[$min_key-1]['request_qty'],
 								];
 								goto subtractOld;
 							}else{
@@ -118,12 +140,19 @@ function getItemCost($item_id,$unit,$requestQty=0)
 									'unit'         =>$additionalArray[$min_key-1]['unit'],
 									'cost'         =>$additionalArray[$min_key-1]['cost'],
 									'warehouse_id' =>$additionalArray[$min_key-1]['warehouse_id'],
-									'type_'        =>$additionalArray[$min_key-1]['type_']
+									'type_'        =>$additionalArray[$min_key-1]['type_'],
+									'remain_qty'   =>$additionalArray[$min_key-1]['remain_qty'],
+									'stock_id'     =>$additionalArray[$min_key-1]['stock_id'],
+									'mainCost'	=> $additionalArray[$min_key-1]['main_cost'],
+									'original_cost'	=> $additionalArray[$min_key-1]['original_cost'],
+									'unit_qty'		=>	$additionalArray[$min_key-1]['unit_qty'],
+									'request_qty'	=>  $additionalArray[$min_key-1]['request_qty'],
 								];
 								goto findCost;
 							}
 						}
 					}else{
+						// print_r($additionalArray);exit;
 						$additionalArray[$min_key] = [
 							'id'           =>$additionalArray[$min_key]['id'],
 							'code'         =>$additionalArray[$min_key]['code'],
@@ -134,7 +163,13 @@ function getItemCost($item_id,$unit,$requestQty=0)
 							'unit'         =>$additionalArray[$min_key]['unit'],
 							'cost'         =>$additionalArray[$min_key]['cost'],
 							'warehouse_id' =>$additionalArray[$min_key]['warehouse_id'],
-							'type_'        =>$additionalArray[$min_key]['type_']
+							'type_'        =>$additionalArray[$min_key]['type_'],
+							'remain_qty'   =>$additionalArray[$min_key]['remain_qty'],
+							'stock_id'     =>$additionalArray[$min_key]['stock_id'],
+							'mainCost'	=> $additionalArray[$min_key]['main_cost'],
+							'original_cost'	=> $additionalArray[$min_key]['original_cost'],
+							'unit_qty'		=>	$additionalArray[$min_key]['unit_qty'],
+							'request_qty'	=>  $additionalArray[$min_key]['request_qty'],
 						];
 						goto findCost;
 					}
@@ -142,6 +177,7 @@ function getItemCost($item_id,$unit,$requestQty=0)
 				findCost : {
 					$oldRequest = $requestQty;
 					$usedQty = 0;
+					
 					for($i=0;$i<count($additionalArray);$i++) { 
 						if (isset($additionalArray[$i])) {
 							$qty = (float)($additionalArray[$i]['qty'] - $requestQty);
@@ -153,7 +189,13 @@ function getItemCost($item_id,$unit,$requestQty=0)
 										'item_id' =>$additionalArray[$i]['item_id'],
 										'qty'     =>$additionalArray[$i]['qty'],
 										'unit'    =>$additionalArray[$i]['unit'],
-										'cost'    =>$additionalArray[$i]['cost']
+										'cost'    =>$additionalArray[$i]['cost'],
+										'remain_qty'    =>$additionalArray[$i]['remain_qty'],
+										'stock_id'     =>$additionalArray[$i]['stock_id'],
+										'mainCost'	=> $additionalArray[$i]['main_cost'],
+										'original_cost'	=> $additionalArray[$i]['original_cost'],
+										'unit_qty'		=>	$additionalArray[$i]['unit_qty'],
+										'request_qty'	=>  $additionalArray[$i]['request_qty'],
 									];
 								}
 							}else{
@@ -163,7 +205,13 @@ function getItemCost($item_id,$unit,$requestQty=0)
 										'item_id' =>$additionalArray[$i]['item_id'],
 										'qty'     =>$requestQty,
 										'unit'    =>$additionalArray[$i]['unit'],
-										'cost'    =>$additionalArray[$i]['cost']
+										'cost'    =>$additionalArray[$i]['cost'],
+										'remain_qty'    =>$additionalArray[$i]['remain_qty'],
+										'stock_id'     =>$additionalArray[$i]['stock_id'],
+										'mainCost'	=> $additionalArray[$i]['main_cost'],
+										'original_cost'	=> $additionalArray[$i]['original_cost'],
+										'unit_qty'		=>	$additionalArray[$i]['unit_qty'],
+										'request_qty'	=>  $additionalArray[$i]['request_qty'],
 									];
 								}
 							}
@@ -187,7 +235,12 @@ function getItemCost($item_id,$unit,$requestQty=0)
 							'unit'         =>$CostingRs->unit,
 							'cost'         =>$CostingRs->cost,
 							'warehouse_id' =>$CostingRs->warehouse_id,
-							'type_'        =>$CostingRs->type_
+							'type_'        =>$CostingRs->type_,
+							'remain_qty'   =>$CostingRs->remain_qty,
+							'stock_id'     =>$CostingRs->stock_id,
+							'original_cost'	=> $CostingRs->original_cost,
+							'unit_qty'		=>	$unit_qty,
+							'request_qty'	=>  $requestQty
 						];
 					}
 				}
@@ -216,7 +269,13 @@ function getItemCost($item_id,$unit,$requestQty=0)
 									'unit'         =>$additionalArray[$min_key-1]['unit'],
 									'cost'         =>$additionalArray[$min_key-1]['cost'],
 									'warehouse_id' =>$additionalArray[$min_key-1]['warehouse_id'],
-									'type_'        =>$additionalArray[$min_key-1]['type_']
+									'type_'        =>$additionalArray[$min_key-1]['type_'],
+									'remain_qty'   =>$additionalArray[$min_key-1]['remain_qty'],
+									'stock_id'     =>$additionalArray[$min_key-1]['stock_id'],
+									'mainCost'	=> $additionalArray[$min_key-1]['main_cost'],
+									'original_cost'	=> $additionalArray[$min_key-1]['original_cost'],
+									'unit_qty'		=>	$additionalArray[$min_key-1]['unit_qty'],
+									'request_qty'	=>  $additionalArray[$min_key-1]['request_qty'],
 								];
 								goto subtractOld_;
 							}else{
@@ -230,7 +289,13 @@ function getItemCost($item_id,$unit,$requestQty=0)
 									'unit'         =>$additionalArray[$min_key-1]['unit'],
 									'cost'         =>$additionalArray[$min_key-1]['cost'],
 									'warehouse_id' =>$additionalArray[$min_key-1]['warehouse_id'],
-									'type_'        =>$additionalArray[$min_key-1]['type_']
+									'type_'        =>$additionalArray[$min_key-1]['type_'],
+									'remain_qty'   =>$additionalArray[$min_key-1]['remain_qty'],
+									'stock_id'     =>$additionalArray[$min_key-1]['stock_id'],
+									'mainCost'	=> $additionalArray[$min_key-1]['main_cost'],
+									'original_cost'	=> $additionalArray[$min_key-1]['original_cost'],
+									'unit_qty'		=>	$additionalArray[$min_key-1]['unit_qty'],
+									'request_qty'	=>  $additionalArray[$min_key-1]['request_qty'],
 								];
 								goto findCost_;
 							}
@@ -246,7 +311,13 @@ function getItemCost($item_id,$unit,$requestQty=0)
 							'unit'         =>$additionalArray[$min_key]['unit'],
 							'cost'         =>$additionalArray[$min_key]['cost'],
 							'warehouse_id' =>$additionalArray[$min_key]['warehouse_id'],
-							'type_'        =>$additionalArray[$min_key]['type_']
+							'type_'        =>$additionalArray[$min_key]['type_'],
+							'remain_qty'   =>$additionalArray[$min_key]['remain_qty'],
+							'stock_id'     =>$additionalArray[$min_key]['stock_id'],
+							'mainCost'	=> $additionalArray[$min_key]['main_cost'],
+							'original_cost'	=> $additionalArray[$min_key]['original_cost'],
+							'unit_qty'		=>	$additionalArray[$min_key]['unit_qty'],
+							'request_qty'	=>  $additionalArray[$min_key]['request_qty'],
 						];
 						goto findCost_;
 					}
@@ -266,7 +337,13 @@ function getItemCost($item_id,$unit,$requestQty=0)
 										'item_id' =>$additionalArray[$i]['item_id'],
 										'qty'     =>$additionalArray[$i]['qty'],
 										'unit'    =>$additionalArray[$i]['unit'],
-										'cost'    =>$additionalArray[$i]['cost']
+										'cost'    =>$additionalArray[$i]['cost'],
+										'remain_qty'    =>$additionalArray[$i]['remain_qty'],
+										'stock_id'     =>$additionalArray[$i]['stock_id'],
+										'mainCost'	=> $additionalArray[$i]['main_cost'],
+										'original_cost'	=> $additionalArray[$i]['original_cost'],
+										'unit_qty'		=>	$additionalArray[$i]['unit_qty'],
+										'request_qty'	=>  $additionalArray[$i]['request_qty'],
 									];
 								}
 							}else{
@@ -276,7 +353,13 @@ function getItemCost($item_id,$unit,$requestQty=0)
 										'item_id' =>$additionalArray[$i]['item_id'],
 										'qty'     =>$requestQty,
 										'unit'    =>$additionalArray[$i]['unit'],
-										'cost'    =>$additionalArray[$i]['cost']
+										'cost'    =>$additionalArray[$i]['cost'],
+										'remain_qty'    =>$additionalArray[$i]['remain_qty'],
+										'stock_id'     =>$additionalArray[$i]['stock_id'],
+										'mainCost'	=> $additionalArray[$i]['main_cost'],
+										'original_cost'	=> $additionalArray[$i]['original_cost'],
+										'unit_qty'		=>	$additionalArray[$i]['unit_qty'],
+										'request_qty'	=>  $additionalArray[$i]['request_qty'],
 									];
 								}
 							}
@@ -289,18 +372,50 @@ function getItemCost($item_id,$unit,$requestQty=0)
 				'item_id' =>$item_id,
 				'qty'     =>$requestQty,
 				'unit'    =>$unit,
-				'cost'    =>0
+				'cost'    =>$requestPrice,
+				'main_cost'	=> 0,
+				'original_cost'	=> 0,
+				'unit_qty'		=>	$unit_qty,
+				'remain_qty'    =>0,
+				'request_qty'     =>$requestQty,
+				'stock_id'     =>0,
 			];
 		}
 	}else{
 		$costing[] = [
-			'item_id' =>$item_id,
-			'qty'     =>$requestQty,
-			'unit'    =>$unit,
-			'cost'    =>0
+			'item_id' 		=>$item_id,
+			'qty'     		=>$requestQty,
+			'unit'    		=>$unit,
+			'cost'    		=>$requestPrice,
+			'main_cost'		=> 0,
+			'original_cost'	=> 0,
+			'unit_qty'		=>	$unit_qty,
+			'remain_qty'    =>0,
+			'request_qty'   =>$requestQty,
+			'stock_id'     	=>0,
 		];
 	}
 	return $costing;
+}
+
+function romanize($num) {
+	$lookup = ['M'=>1000,'CM'=>900,'D'=>500,'CD'=>400,'C'=>100,'XC'=>90,'L'=>50,'XL'=>40,'X'=>10,'IX'=>9,'V'=>5,'IV'=>4,'I'=>1];
+	$integer = intval($num);
+	$result = '';
+		foreach($lookup as $roman => $value){
+			// Determine the number of matches
+			$matches = intval($integer/$value);
+		   
+			// Add the same number of characters to the string
+			$result .= str_repeat($roman,$matches);
+		   
+			// Set the integer to be the remainder of the integer and the value
+			$integer = $integer % $value;
+		   }
+		   
+		   // The Roman numeral should be built, return it
+		   return $result;
+		  
 }
 
 function getAllocateStock($warehouse_id, $item_id, $unit, $qty){
@@ -347,7 +462,98 @@ function getAllocateStock($warehouse_id, $item_id, $unit, $qty){
 function getBOQs($id=NULL){
 	$where = '';
 	if($id && $id!=0){
-		$where = ' WHERE pr_boqs.id = '.$id;
+		$where = ' and pr_boqs.id = '.$id;
+	}
+	// $sql = "SELECT `pr_boqs`.`id`, pr_boqs.`house_id`, 
+	// (SELECT pr_houses.`house_no` FROM pr_houses WHERE pr_houses.`id` = pr_boqs.`house_id`) AS house_no, 
+	// (SELECT pr_houses.`street_id` FROM pr_houses WHERE pr_houses.`id` = pr_boqs.`house_id` LIMIT 1) AS street_id, 
+	// (SELECT pr_system_datas.`name` FROM pr_system_datas WHERE pr_system_datas.`type` = 'ST' AND pr_system_datas.`id` = (SELECT pr_houses.`street_id` FROM pr_houses WHERE pr_houses.`id` = pr_boqs.`house_id` LIMIT 1) LIMIT 1) AS street, 
+	// pr_boqs.`line_no`, pr_boqs.`trans_date`, pr_boqs.trans_by AS trans_by_id, 
+	// (SELECT pr_users.`name` FROM pr_users WHERE pr_users.`id` = pr_boqs.`trans_by`) AS `trans_by`, pr_boqs.`trans_type` FROM pr_boqs".$where; 
+	// return DB::select($sql);
+	$sql = "SELECT *,
+		(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_boqs`.`zone_id`) AS zone_name,
+		(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_boqs`.`block_id`) AS block_name,
+		(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_boqs`.`building_id`) AS building_name,
+		(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_boqs`.`street_id`) AS street_name,
+		 pr_boqs.trans_by AS trans_by_id,
+		 (SELECT pr_users.`name` FROM pr_users WHERE pr_users.`id` = pr_boqs.`trans_by`) AS `trans_by`
+	FROM `pr_boqs` where pr_boqs.status = 1 ".$where;
+	return DB::select($sql);
+}
+function getBOQExcel($id=NULL){
+	$where = '';
+	if($id && $id!=0){
+		$where = ' and pr_boq_items.boq_house_id = '.$id.' GROUP BY pr_boq_items.id';
+	}      
+	$sql = "SELECT pr_boq_items.*,
+	(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = pr_items.`cat_id`) AS item_type,	
+	pr_items.`name`,
+	pr_items.`desc`,
+	pr_items.`code`	
+	FROM pr_boq_items 
+	JOIN pr_boqs
+		ON pr_boqs.id = pr_boq_items.boq_id 
+	JOIN pr_items
+		ON pr_items.id=pr_boq_items.item_id	
+	WHERE pr_boqs.status = 1 ".$where;
+	return DB::select($sql);
+}
+function getBOQWorkType($id=NULL){
+	$where = '';
+	if($id && $id!=0){
+		$where = ' and pr_boq_items.boq_house_id = '.$id.' GROUP BY pr_boq_items.working_type';
+	}      
+	$sql = "SELECT pr_boq_items.*,
+	(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = pr_boq_items.`working_type`) AS working_type_name
+	FROM pr_boq_items 
+	JOIN pr_boqs
+		ON pr_boqs.id = pr_boq_items.boq_id 
+	WHERE pr_boqs.status = 1 ".$where;
+	return DB::select($sql);
+}
+function getBOQExport($id=NULL){
+	$where = '';
+	if($id && $id!=0){
+		$where = ' and pr_boqs.id = '.$id;
+	}
+	$sql = "SELECT
+		pr_boqs.`boq_code`,	
+		pr_boqs.trans_date,	
+		(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_boqs`.`zone_id`) AS zone_name,
+		(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_boqs`.`block_id`) AS block_name,
+		(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_boqs`.`building_id`) AS building_name,
+		(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_boqs`.`street_id`) AS street_name,
+		(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_boqs`.`house_type`) AS house_type,
+		pr_boq_items.`item_id`,
+		(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = pr_items.`cat_id`) AS item_type,	
+		pr_items.`name`,
+		pr_items.`desc`,
+		pr_items.`code`,
+		pr_boq_items.`qty_add`,
+		pr_boq_items.`qty_std`,
+		pr_boq_items.`unit`,
+		pr_boq_items.`working_type`,
+		pr_boq_items.`cost`,
+		(SELECT pr_system_datas.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = pr_boq_items.`working_type`) AS working_type,
+		pr_houses.`house_no`,
+		pr_houses.`house_desc`
+		FROM
+			pr_boq_items
+		JOIN pr_boqs
+			ON pr_boqs.id = pr_boq_items.boq_id
+		JOIN pr_boq_houses
+			ON pr_boq_houses.boq_id = pr_boqs.id
+		JOIN pr_houses
+			ON pr_houses.id = pr_boq_items.`house_id` 
+		JOIN pr_items
+			ON pr_items.id=pr_boq_items.item_id where pr_boqs.status = 1 ".$where;
+	return DB::select($sql);
+}
+function getBOQReviseVersions($id=NULL){
+	$where = '';
+	if($id && $id!=0){
+		$where = ' and pr_boqs.referent_id = '.$id;
 	}
 	// $sql = "SELECT `pr_boqs`.`id`, pr_boqs.`house_id`, 
 	// (SELECT pr_houses.`house_no` FROM pr_houses WHERE pr_houses.`id` = pr_boqs.`house_id`) AS house_no, 
@@ -364,23 +570,87 @@ function getBOQs($id=NULL){
 		 pr_boqs.trans_by AS trans_by_id,
 		 (SELECT pr_users.`name` FROM pr_users WHERE pr_users.`id` = pr_boqs.`trans_by`) AS `trans_by`
 
-	FROM `pr_boqs`".$where;
+	FROM `pr_boqs` where pr_boqs.status = 0 ".$where;
 	return DB::select($sql);
+}
+function getBoqWorkingType($id,$house_id = null){
+	// $where = ['status'=>1];
+	// $sql = "SELECT * FROM `pr_boq_items` JOIN `pr_system_datas` ON `pr_system_datas`.`id` = `pr_boq_items`.`working_type` WHERE `pr_boq_items`.`boq_id`=".$id;
+	// if($house_id != null){
+	// 	$sql = $sql." JOIN pr_boq_houses on pr_boq_items.boq_house_id = pr_boq_houses.house_id";
+	// }
+	// return DB::select($sql);
+	// print_r($id);
+	// print_r($house_id);
+
+	$working_type = Boq::select(
+		"boqs.id AS boq_id",
+		DB::raw("(SELECT `pr_system_datas`.`name` FROM `pr_system_datas` WHERE `pr_system_datas`.`id` = `pr_boq_items`.`working_type`) AS working_type_name"),
+	"boq_houses.boq_house_code",
+	"boq_houses.house_id",
+	"houses.house_no" ,
+	"boq_items.working_type",
+	"boq_items.working_type AS id")
+	->join("boq_houses","boq_houses.boq_id","boqs.id")
+	->join("boq_items","boq_items.boq_house_id","boq_houses.id")
+	->join("houses","houses.id","boq_houses.house_id")->where("boqs.id",$id)->where("boq_houses.house_id",$house_id)->groupBy("boq_items.working_type")->get();
+	return $working_type;
 }
 function getBoqHouses($id=null){
 	$where = '';
 	if($id && $id!=0){
-		$where = ' WHERE `pr_boq_houses`.`boq_id` = '.$id;
+		$where = ' AND `pr_boq_houses`.`boq_id` = '.$id;
 	}
 	$sql = "SELECT * ,
 				(SELECT `pr_houses`.`house_no` FROM `pr_houses` WHERE `pr_houses`.id = `pr_boq_houses`.`house_id`) AS house,
 				(SELECT `pr_houses`.`house_desc` FROM `pr_houses` WHERE `pr_houses`.id = `pr_boq_houses`.`house_id`) AS house_desc
-			FROM `pr_boq_houses`".$where;
+			FROM `pr_boq_houses` WHERE pr_boq_houses.status = 1 ".$where;
 	return DB::select($sql);
+}
+
+function getReviseBoqHouses($id=null){
+	$where = '';
+	if($id && $id!=0){
+		$where = ' `pr_boq_houses`.`boq_id` = '.$id;
+	}
+	$sql = "SELECT * ,
+				(SELECT `pr_houses`.`house_no` FROM `pr_houses` WHERE `pr_houses`.id = `pr_boq_houses`.`house_id`) AS house,
+				(SELECT `pr_houses`.`house_desc` FROM `pr_houses` WHERE `pr_houses`.id = `pr_boq_houses`.`house_id`) AS house_desc
+			FROM `pr_boq_houses` WHERE ".$where;
+	return DB::select($sql);
+}
+
+function getBoqHouseItems($id,$house_id = null ,$working_type=null){
+	$boqItems = BoqItem::select(
+		'items.*',
+		'boq_items.*',
+		'boq_items.unit as boq_unit',
+		'items.cat_id',
+		'system_datas.name as working_type_name',
+		DB::raw('SUM(pr_boq_items.qty_std) as total_qty')
+	)->join('boq_houses','boq_houses.id','boq_items.boq_house_id')
+	->join('system_datas','system_datas.id','boq_items.working_type')
+	->join('items','items.id','boq_items.item_id')
+	->where('boq_houses.boq_id',$id);
+	if($house_id != null){
+		$boqItems = $boqItems->where('boq_houses.house_id',$house_id);
+	}
+	if($working_type != null){
+		$boqItems = $boqItems->where('boq_items.working_type',$working_type);
+	}
+	$boqItems = $boqItems->groupBy('boq_items.id')
+	->orderBy('boq_items.working_type')->get();
+	
+	return $boqItems; 
 }
 
 function getBOQItems($id){
 	$sql = "SELECT pr_boq_items.`id`, pr_boq_items.`item_id`, pr_boq_items.`house_id`, (SELECT pr_houses.house_no FROM pr_houses WHERE pr_houses.id = pr_boq_items.`house_id`) AS house_no, (SELECT pr_items.`code` FROM pr_items WHERE pr_items.`id` = pr_boq_items.`item_id`) AS `code`, (SELECT pr_items.`name` FROM pr_items WHERE pr_items.`id` = pr_boq_items.`item_id`) AS `name`, pr_boq_items.`unit`, pr_boq_items.`qty_std`, pr_boq_items.`qty_add` FROM pr_boq_items WHERE pr_boq_items.`boq_id` = $id"; return DB::select($sql);
+}
+
+function getBOQItemByWorkingType($id = null,$working_type = null){
+	$sql = "SELECT * FROM `pr_boq_items` JOIN `pr_items` ON `pr_items`.`id`=`pr_boq_items`.`item_id` WHERE `pr_boq_items`.`boq_id` =".$id." AND `pr_boq_items`.`working_type` = ".$working_type;
+	return DB::select($sql);
 }
 
 function getLineNo($id){

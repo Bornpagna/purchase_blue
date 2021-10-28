@@ -37,6 +37,7 @@ class DepartmentController extends Controller
 				],
 			],
 			'rounte'		=> url("depart/dt"),
+			'types'			=> ''
 		];
 		
 		if(hasRole('department_add')){

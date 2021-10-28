@@ -74,6 +74,32 @@
 						@endif
 						<div class="col-md-6">
 							<div class="form-group">
+								<label class="col-md-4 control-label bold">{{trans('lang.building')}} 
+									<span class="required">*</span>
+								</label>
+								<div class="col-md-8">
+									@if(hasRole('building_add'))
+										<div class="input-group">
+											<select name="building_id" id="building_id-edit" class="form-control building my-select2">
+												<option value=""></option>
+												{{getSystemData('BD')}}
+											</select>
+											<span class="input-group-addon btn blue" id="btnAddBuildingEdit">
+												<i class="fa fa-plus"></i>
+											</span>
+										</div>
+									@else
+										<select name="building_id" id="building_id" class="form-control building my-select2">
+											<option value=""></option>
+											{{getSystemData('BD')}}
+										</select>
+									@endif
+									<span class="help-block font-red bold"></span>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="form-group">
 								<label class="col-md-4 control-label bold">{{trans('lang.street')}} 
 									<span class="required">*</span>
 								</label>
@@ -124,17 +150,7 @@
 								</div>
 							</div>
 						</div>
-						<div class="col-md-6">
-							<div class="form-group">
-								<label class="col-md-4 control-label bold">{{trans('lang.house_no')}} 
-									<span class="required">*</span>
-								</label>
-								<div class="col-md-8">
-									<input type="text" id="house_no-edit" length="50" class="form-control house_no-edit" name="house_no" placeholder="{{trans("lang.enter_text")}}" />
-									<span class="help-block font-red bold"></span>
-								</div>
-							</div>
-						</div>
+						
 						<div class="col-md-6">
 							<div class="form-group">
 								<label class="col-md-4 control-label bold">{{trans('lang.status')}} 
@@ -146,6 +162,17 @@
 										<option value="2">{{trans('lang.finish')}}</option>
 										<option value="3">{{trans('lang.stop')}}</option>
 									</select>
+									<span class="help-block font-red bold"></span>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="form-group">
+								<label class="col-md-4 control-label bold">{{trans('lang.house_no')}} 
+									<span class="required">*</span>
+								</label>
+								<div class="col-md-8">
+									<input type="text" id="house_no-edit" length="50" class="form-control house_no-edit" name="house_no" placeholder="{{trans("lang.enter_text")}}" />
 									<span class="help-block font-red bold"></span>
 								</div>
 							</div>

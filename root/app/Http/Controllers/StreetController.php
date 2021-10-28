@@ -38,6 +38,7 @@ class StreetController extends Controller
 					],
 			],
 			'rounte'		=> url("street/dt"),
+			'types'			=> ''
 		];
 		
 		if(hasRole('street_add')){
@@ -194,7 +195,7 @@ class StreetController extends Controller
 			$pro_id = $request->session()->get('project');
 			$error = '';
 			if(!empty($data) && $data->count()){
-				foreach ($data as $key => $value) {
+				foreach ($data as $key => $value) {					
 					if (count($value)==2) {
 						if (($value->name) && ($value->description)) {
 							if (count(DB::table('system_datas')->where('name','=',$value->name)->where('type','=',self::SYSTEM_TYPE)->where('parent_id','=',$pro_id)->get(['id','name'])->toArray())==0) {

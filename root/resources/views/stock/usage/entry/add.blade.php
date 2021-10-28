@@ -5,6 +5,13 @@
 	.btnAdd{
 		cursor: pointer;
 	}
+	#table-income tbody tr td{
+		vertical-align: middle;
+		
+	}
+	#table-income tbody tr td.center{
+		text-align: center;
+	}
 </style>
 <div class="row">
 	<div class="col-md-12">
@@ -66,7 +73,10 @@
 												</div>
 											</div>
 											<div class="form-group">
-												<label for="reference" class="col-md-4 control-label"><strong>{{ trans('lang.reference') }}</strong></label>
+												<label for="reference" class="col-md-4 control-label">
+													<strong>{{ trans('lang.reference') }}</strong>
+													<span class="required"> * </span>
+												</label>
 												<div class="col-md-8">
 													<input class="form-control reference"​​ length="100" type="text" id="reference" name="reference" placeholder="{{ trans('lang.enter_text') }}">
 													<span class="help-block font-red bold"></span>
@@ -74,7 +84,7 @@
 											</div>
 											<div class="form-group">
 												<label for="warehouse_id" class="col-md-4 control-label"><strong>{{ trans('lang.warehouse') }}</strong>
-													<span class="required"> * </span>
+													<span class="required">  </span>
 												</label>
 												<div class="col-md-8">
 													@if(hasRole('warehouse_add'))
@@ -169,13 +179,15 @@
 								<thead>
 									<tr style="font-size:12px;">
 										<th width="5%" class="text-center all">{{ trans('lang.line_no') }}</th>
-										<th width="15%" class="text-center all">{{ trans('lang.from_warehouse') }}</th>
-										<th width="10%" class="text-center all">{{ trans('lang.street') }}</th>
+										<th width="10%" class="text-center all">{{ trans('lang.from_warehouse') }}</th>
+										<th width="10%" class="text-center all">{{ trans('lang.building') }}</th>
 										<th width="10%" class="text-center all">{{ trans('lang.on_house') }}</th>
-										<th width="20%" class="text-center all">{{ trans('lang.items') }}</th>
+										<th width="10%" class="text-center all">{{ trans('lang.items') }}</th>
 										<th width="10%" class="text-center all">{{ trans('lang.units') }}</th>
+										<th width="10%" class="text-center all">{{ trans('lang.qty_in_stock') }}</th>
+										<th width="10%" class="text-center all">{{ trans('lang.remain_qty') }}</th>
 										<th width="10%" class="text-center all">{{ trans('lang.qty') }}</th>
-										<th width="15%" class="text-center all">{{ trans('lang.note') }}</th>
+										<th width="10%" class="text-center all">{{ trans('lang.note') }}</th>
 										<th width="5%" class="text-center all"><i class='fa fa-plus btnAdd' id="btnAdd"></i></th>
 									</tr>
 								</thead>
@@ -222,8 +234,12 @@
 		return $.ajax({url:'{{url("/stock/use/GetItem")}}',type:'GET',dataType:'json',data:{q:query},async:false}).responseJSON;
 	}
 
-	function GetHouse(street_id) {
-		return $.ajax({url:'{{url("/stock/use/GetHouse")}}',type:'GET',dataType:'json',data:{id:street_id},async:false}).responseJSON;
+	// function GetHouse(street_id) {
+	// 	return $.ajax({url:'{{url("/stock/use/GetHouse")}}',type:'GET',dataType:'json',data:{id:street_id},async:false}).responseJSON;
+	// }
+
+	function GetHouse(building_id){
+		return $.ajax({url:'{{url("/repository/getHousesByAllTrigger")}}',type:'GET',dataType:'json',data:{building_id:building_id},async:false}).responseJSON;
 	}
 
 	function GetStreet(query) {
@@ -320,12 +336,18 @@
 
 	$('#save_close,#save_new').on('click',function(){
 		$(this).prop('disabled', true);
-		if(chkValid([".reference_no",".trans_date",".reference",".trans_desc",".line_from_warehouse",".line_on_house",".line_street",".line_item",".line_unit",".line_use_qty",<?php if(getSetting()->usage_constructor==1){echo '".sub_const",';} ?>".engineer"])){
-			if(isSave()){
-				objRef = GetRef();
-				if (chkReference(objRef, '#reference')) {
-					$("#btnSubmit").val($(this).val());
-					$('#form-stock-entry').submit();
+		var errorClass =$("input[class*='error-qty']");
+		if(errorClass.length == 0){
+			if(chkValid([".reference_no",".trans_date",".reference",".trans_desc",".line_from_warehouse",".line_on_house",".line_street",".line_item",".line_unit",".line_use_qty",<?php if(getSetting()->usage_constructor==1){echo '".sub_const",';} ?>".engineer"])){
+				if(isSave()){
+					objRef = GetRef();
+					if (chkReference(objRef, '#reference')) {
+						$("#btnSubmit").val($(this).val());
+						$('#form-stock-entry').submit();
+					}else{
+						$(this).prop('disabled', false);
+						return false;
+					}
 				}else{
 					$(this).prop('disabled', false);
 					return false;
@@ -335,9 +357,9 @@
 				return false;
 			}
 		}else{
-			$(this).prop('disabled', false);
-			return false;
-		}
+				$(this).prop('disabled', false);
+				return false;
+			}
 	});
 	
 	function onChangeWarehouse(field, row){
@@ -354,8 +376,32 @@
 			$('.line_unit_'+row).select2('val', null);
 		}
 	}
-	
+	function onChangeBuilding(field,row){
+		var val = $(field).val();
+		jsonHouse = GetHouse(val);
+		if(val!=null && val!='' && jsonHouse){
+			$('.line_on_house_'+row).empty();
+			$('.line_on_house_'+row).append($('<option></option>').val('').text(''));
+			$('.line_on_house_'+row).select2('val', null);
+			$.each(jsonHouse, function(key ,value){
+				$('.line_on_house_'+row).append($('<option></option>').val(value.id).text(value.house_no));
+			});
+		}
+	}
 	function onChangeStreet(field, row){
+		var val = $(field).val();
+		jsonHouse = GetHouse(val);
+		if(val!=null && val!='' && jsonHouse){
+			$('.line_on_house_'+row).empty();
+			$('.line_on_house_'+row).append($('<option></option>').val('').text(''));
+			$('.line_on_house_'+row).select2('val', null);
+			$.each(jsonHouse, function(key ,value){
+				$('.line_on_house_'+row).append($('<option></option>').val(value.id).text(value.house_no));
+			});
+		}
+	}
+
+	function onChangeBuilding(field, row){
 		var val = $(field).val();
 		jsonHouse = GetHouse(val);
 		if(val!=null && val!='' && jsonHouse){
@@ -413,11 +459,26 @@
 					'trans_date':trans_date,
 				},
 				success:function(data){
+					var stock_qty = parseFloat(data.stock_qty);
+					var boq_qty = parseFloat(data.boq_set);
+					var remain_qty = parseFloat(data.remain_boq);
+					var stock_sty_with_unit = stock_qty.toFixed(4) + unit;
+					// var boq_qty_with_unit = boq_qty.toFixed(4) + unit;
+					var remain_boq_qty_with_unit = remain_qty.toFixed(4) + " | " + unit;
+					if(data.boq_set == -1){
+                        var boq_qty_with_unit = "Boq not set";
+					}else{
+						var boq_qty_with_unit = boq_qty.toFixed(4) + unit;
+					}
 					$('.line_stock_qty_'+row).val(data.stock_qty);
 					$('.line_boq_set_'+row).val(data.boq_set);
+					$(".stock_qty_"+row).text(stock_sty_with_unit);
+					$(".remain_qty_"+row).text(remain_boq_qty_with_unit);
 				},error:function(){
 					$('.line_stock_qty_'+row).val(0);
 					$('.line_boq_set_'+row).val(0);
+					$(".stock_qty_"+row).text(0);
+					$(".remain_qty_"+row).text(0);
 					console.log('error get qty stock.');
 				}
 			});
@@ -434,25 +495,31 @@
 			if(parseFloat(boq_set) == -1){
 				if(parseFloat(use_qty) > parseFloat(stock_qty)){
 					$(field).css('border','1px solid #e43a45');
+					$(field).addClass('error-qty');
 					$(".show-message-error").html('{{trans("lang.greater_than_stock_qty")}}!');
 				}else{
 					$(field).css('border','1px solid #c2cad8');
+					$(field).removeClass('error-qty');
 					$(".show-message-error").empty();
 				}
 			}else{
 				if(parseFloat(use_qty) > parseFloat(boq_set)){
 					$(field).css('border','1px solid #e43a45');
+					$(field).addClass('error-qty');
 					$(".show-message-error").html('{{trans("lang.greater_than_boq_qty")}}!');
 				}else if(parseFloat(use_qty) > parseFloat(stock_qty)){
 					$(field).css('border','1px solid #e43a45');
+					$(field).addClass('error-qty');
 					$(".show-message-error").html('{{trans("lang.greater_than_stock_qty")}}!');
 				}else{
 					$(field).css('border','1px solid #c2cad8');
+					$(field).removeClass('error-qty');
 					$(".show-message-error").empty();
 				}
 			}
 		}else{
 			$(field).css('border','1px solid #c2cad8');
+			$(field).removeClass('error-qty');
 			$(".show-message-error").empty();
 		}
 	}
@@ -473,12 +540,30 @@
 					'		{{getWarehouse()}}'+
 					'	</select>'+
 					'</td>'+
+					// '<td>'+
+					// '	<select class="form-control line_zone line_zone_'+i+'" onchange="onChangeStreet(this, '+i+')" name="line_street[]">'+
+					// '		<option value=""></option>'+
+					// '		{{getSystemData("ST")}}'+
+					// '	</select>'+
+					// '</td>'+
+					// '<td>'+
+					// '	<select class="form-control line_block line_block_'+i+'" onchange="onChangeStreet(this, '+i+')" name="line_street[]">'+
+					// '		<option value=""></option>'+
+					// '		{{getSystemData("ST")}}'+
+					// '	</select>'+
+					// '</td>'+
 					'<td>'+
-					'	<select class="form-control line_street line_street_'+i+'" onchange="onChangeStreet(this, '+i+')" name="line_street[]">'+
+					'	<select class="form-control line_building line_building_'+i+'" onchange="onChangeBuilding(this, '+i+')" name="line_building[]">'+
 					'		<option value=""></option>'+
-					'		{{getSystemData("ST")}}'+
+					'		{{getSystemData("BD")}}'+
 					'	</select>'+
 					'</td>'+
+					// '<td>'+
+					// '	<select class="form-control line_street line_street_'+i+'" onchange="onChangeStreet(this, '+i+')" name="line_street[]">'+
+					// '		<option value=""></option>'+
+					// '		{{getSystemData("ST")}}'+
+					// '	</select>'+
+					// '</td>'+
 					'<td>'+
 					'	<select class="form-control line_on_house line_on_house_'+i+'" onchange="onChangeHouse(this, '+i+')" name="line_on_house[]">'+
 					'		<option value=""></option>'+
@@ -494,6 +579,12 @@
 					'		<option value=""></option>'+
 					'	</select>'+
 					'</td>'+
+					'<td class="center">'+
+					'	<span class="center stock_qty stock_qty_'+i+'"><span/>'+
+					'</td>'+
+					'<td class="center">'+
+					'	<span class="center remain_qty remain_qty_'+i+'"><span/>'+
+					'</td>'+
 					'<td>'+
 					'	<input type="number" length="50" step="any" class="noscroll form-control line_use_qty line_use_qty_'+i+'" name="line_use_qty[]" onkeyup="enterQtyUsage(this, '+i+')" />'+
 					'	<input type="hidden" class="form-control line_stock_qty line_stock_qty_'+i+'" name="line_stock_qty[]"/>'+
@@ -507,7 +598,7 @@
 					'</td>'+
 				'</tr>');
 			$.fn.select2.defaults.set("theme", "classic");
-			$(".line_on_house_"+i+",.line_from_warehouse_"+i+",.line_street_"+i+",.line_unit_"+i).select2({placeholder:'{{trans("lang.please_choose")}}',width:'100%',allowClear:'true'});
+			$(".line_on_house_"+i+",.line_from_warehouse_"+i+",.line_building_"+i+",.line_unit_"+i).select2({placeholder:'{{trans("lang.please_choose")}}',width:'100%',allowClear:'true'});
 			var warehouse_id = $("#warehouse_id").val();
 
 			var itemSelect = $('.line_item_'+i);

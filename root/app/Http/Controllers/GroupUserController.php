@@ -37,6 +37,7 @@ class GroupUserController extends Controller
 			],
 			'rounte'		=> url("group/dt"),
 			'assign'		=> 'GU',
+			'types'			=>	''
 		];
 		
 		if(hasRole('user_group_add')){

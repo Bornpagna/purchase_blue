@@ -167,6 +167,8 @@ class UsageFormulaController extends Controller
             '*',
             DB::raw("(SELECT {$prefix}system_datas.name FROM {$prefix}system_datas WHERE {$prefix}system_datas.id = {$prefix}usage_formulas.zone_id) AS zone"),
 			DB::raw("(SELECT {$prefix}system_datas.name FROM {$prefix}system_datas WHERE {$prefix}system_datas.id = {$prefix}usage_formulas.block_id) AS block"),
+            DB::raw("(SELECT {$prefix}system_datas.name FROM {$prefix}system_datas WHERE {$prefix}system_datas.id = {$prefix}usage_formulas.building_id) AS building"),
+            DB::raw("(SELECT {$prefix}system_datas.name FROM {$prefix}system_datas WHERE {$prefix}system_datas.id = {$prefix}usage_formulas.house_type_id) AS house_type"),
 			DB::raw("(SELECT {$prefix}system_datas.name FROM {$prefix}system_datas WHERE {$prefix}system_datas.id = {$prefix}usage_formulas.street_id) AS street"),
         ];
         if(!$usageFormula = UsageFormula::select($columnUsageFormula)->find($id)){
@@ -220,13 +222,13 @@ class UsageFormulaController extends Controller
         try {
             DB::beginTransaction();
 
-            $rules = ['street_id' => 'required'];
-            if(count($request['line_percent']) > 0){
-                for($i=0;$i<count($request['line_percent']);$i++){
-                    $rules = array_merge($rules,['line_percent' => 'required']);
-                }
-            }
-            Validator::make($request->all(),$rules)->validate();
+            // $rules = ['street_id' => 'required'];
+            // if(count($request['line_percent']) > 0){
+            //     for($i=0;$i<count($request['line_percent']);$i++){
+            //         $rules = array_merge($rules,['line_percent' => 'required']);
+            //     }
+            // }
+            // Validator::make($request->all(),$rules)->validate();
 
             $column = [];
             $code = '';
@@ -240,6 +242,11 @@ class UsageFormulaController extends Controller
             if($blockID = $request->input('block_id')){
                 if($block = SystemData::find($blockID)){
                     $code .= "{$block->name}-";
+                }
+            }
+            if($buildingID = $request->input('building_id')){
+                if($building = SystemData::find($buildingID)){
+                    $code .= "{$building->name}-";
                 }
             }
 
@@ -270,6 +277,14 @@ class UsageFormulaController extends Controller
 
             if($blockID){
                 $column = array_merge($column,['block_id' => $blockID]);
+            }
+
+            if($buildingID){
+                $column = array_merge($column,['building_id' => $buildingID]);
+            }
+
+            if($houseTypeID){
+                $column = array_merge($column,['house_type_id' => $houseTypeID]);
             }
 
             if(!$usageFormulaID = DB::table('usage_formulas')->insertGetId($column)){
@@ -308,6 +323,7 @@ class UsageFormulaController extends Controller
     }
 
     public function update(Request $request,$id){
+        // print_r($request->all());exit;
         try {
             DB::beginTransaction();
 
@@ -315,13 +331,13 @@ class UsageFormulaController extends Controller
                 throw new \Exception("UsageFormula[{$id}] not found.");
             }
 
-            $rules = ['street_id' => 'required'];
-            if(count($request['line_index']) > 0){
-                for($i=0;$i<count($request['line_index']);$i++){
-                    $rules = array_merge($rules,['line_percent' => 'required']);
-                }
-            }
-            Validator::make($request->all(),$rules)->validate();
+            // $rules = ['street_id' => 'required'];
+            // if(count($request['line_percent']) > 0){
+            //     for($i=0;$i<count($request['line_percent']);$i++){
+            //         $rules = array_merge($rules,['line_percent' => 'required']);
+            //     }
+            // }
+            // Validator::make($request->all(),$rules)->validate();
 
             $column = [
                 'updated_by' => Auth::user()->id,
@@ -334,6 +350,14 @@ class UsageFormulaController extends Controller
 
             if($blockID = $request->input('block_id')){
                 $column = array_merge($column,['block_id' => $blockID]);
+            }
+
+            if($buildingID = $request->input('building_id')){
+                $column = array_merge($column,['building_id' => $buildingID]);
+            }
+
+            if($houseTypeID = $request->input('house_type')){
+                $column = array_merge($column,['house_type_id' => $houseTypeID]);
             }
 
             if($streetID = $request->input('street_id')){

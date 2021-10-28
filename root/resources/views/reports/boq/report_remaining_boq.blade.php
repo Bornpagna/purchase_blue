@@ -215,6 +215,7 @@
                                             <th width="10%" class="text-center mobile">{{ trans('lang.block') }}</th>
                                             <?php $colspan++;?>
                                             @endif
+                                            <th width="10%" class="text-center mobile">{{ trans('lang.building') }}</th>
                                             <th width="10%" class="text-center mobile">{{ trans('lang.street') }}</th>
                                             <th width="10%" class="text-center mobile">{{ trans('lang.house_type') }}</th>
                                             <th width="10%" class="text-center all">{{ trans('lang.house_no') }}</th>
@@ -475,6 +476,7 @@
         if("{{getSetting()->allow_block == 1}}"){
             columns.push({data: 'block', name:'block'});
         }
+        columns.push({data: 'building', name:'buildng'});
         columns.push({data: 'street', name:'street'});
         columns.push({data: 'house_type', name:'house_type'});
         columns.push({data: 'house_no', name:'house_no'});

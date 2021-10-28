@@ -15,8 +15,10 @@
 		<li class="nav-item <?php if(
 			Request::is('usageFormula') ||
 			Request::is('zone') || 
-			Request::is('block') || 
+			Request::is('block') ||
+			Request::is('building') ||  
 			Request::is('street') || 
+			Request::is('working_type') ||
 			Request::is('constr') || 
 			Request::is('warehouse')){echo "active open";} ?>">
 			<a  class="nav-link nav-toggle">
@@ -29,6 +31,7 @@
 					Request::is('block') || 
 					Request::is('building') || 
 					Request::is('street') || 
+					Request::is('working_type') || 
 					Request::is('constr') || 
 					Request::is('warehouse')){echo "open";}?>"></span>
 			</a>
@@ -72,6 +75,15 @@
 						<i class="fa fa-road"></i>
 						<span class="title">{{ trans('lang.street') }}</span>
 						<?php if(Request::is('street')){echo '<span class="selected"></span>';} ?>
+					</a>
+				</li>
+			@endif
+			@if(hasRole('working_type'))
+				<li class="nav-item <?php if(Request::is('working_type')){echo "active open";} ?>">
+					<a href="{{url('working_type')}}" class="nav-link ">
+						<i class="fa fa-road"></i>
+						<span class="title">{{ trans('lang.working_type') }}</span>
+						<?php if(Request::is('working_type')){echo '<span class="selected"></span>';} ?>
 					</a>
 				</li>
 			@endif
@@ -386,7 +398,7 @@
 					</li>
 					<!-- End Usage with Policy -->
 					@endif
-					@if(hasRole('usage_return'))
+					<!--@if(hasRole('usage_return'))
 						<li class="nav-item <?php if(Request::is('stock/reuse') || Request::is('stock/reuse/*')){echo "active open";} ?>">
 							<a href="{{url('stock/reuse')}}" class="nav-link ">
 								<i class="fa fa-exchange"></i>
@@ -403,7 +415,7 @@
 								<?php if(Request::is('stock/reuse_single') || Request::is('stock/reuse_single/*')){echo '<span class="selected"></span>';} ?>
 							</a>
 						</li>
-					@endif
+					@endif-->
 					</ul>
 				</li>
 			@endif
@@ -422,6 +434,7 @@
 			<ul class="sub-menu">
 				@if(hasRole('report_boq'))
 					<li class="nav-item start <?php if(Request::is('report/sub_boq') 
+							|| Request::is('report/boqTreeView') 
 							|| Request::is('report/boq_detail') 
 							|| Request::is('report/boq/reportRemainingBOQ')
 							|| Request::is('report/boq/reportRemainingBOQTotal')
@@ -430,12 +443,22 @@
 							<i class="fa fa-bitcoin"></i>
 							<span class="title">{{ trans('lang.boq') }}</span>
 							<span class="arrow <?php if(Request::is('report/sub_boq') 
+								|| Request::is('report/boqTreeView') 
 								|| Request::is('report/boq_detail') 
 								|| Request::is('report/boq/reportRemainingBOQ')
 								|| Request::is('report/boq/reportRemainingBOQTotal')
 							){echo "open";} ?>"></span>
 						</a>
 						<ul class="sub-menu">
+							@if(hasRole('report_boq_detail'))
+								<li class="nav-item <?php if(Request::is('report/boqTreeView')){echo "active open";} ?>">
+									<a href="{{url('report/boqTreeView')}}" class="nav-link ">
+										<i class="fa fa-building-o"></i>
+										<span class="title">{{ trans('lang.tree_view') }}</span>
+										<span class="<?php if(Request::is('report/boq_detail')){echo "selected";} ?>"></span>
+									</a>
+								</li> 
+							@endif
 							@if(hasRole('report_boq_detail'))
 								<li class="nav-item <?php if(Request::is('report/boq_detail')){echo "active open";} ?>">
 									<a href="{{url('report/boq_detail')}}" class="nav-link ">
@@ -528,7 +551,7 @@
 									</a>
 								</li> 
 							@endif
-							@if(hasRole('report_return_usage'))
+							<!--@if(hasRole('report_return_usage'))
 								<li class="nav-item <?php if(Request::is('report/usage/return')){echo "active open";} ?>">
 									<a href="{{url('report/usage/return')}}" class="nav-link ">
 										<i class="fa fa-home"></i>
@@ -536,7 +559,7 @@
 										<span class="<?php if(Request::is('report/usage/return')){echo "selected";} ?>"></span>
 									</a>
 								</li>
-							@endif
+							@endif-->
 						</ul>
 					</li>
 				@endif

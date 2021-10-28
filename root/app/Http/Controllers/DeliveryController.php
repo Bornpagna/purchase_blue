@@ -77,6 +77,8 @@ class DeliveryController extends Controller
 				],
 			],
 			'rounte'		=> url("stock/deliv/dt"),
+			'rounteOrder'	=> url("purch/order/dt/1/1"),
+			
 			''	=> url(''),
 		];
 		
@@ -139,6 +141,38 @@ class DeliveryController extends Controller
 				'obj'	=> $obj,
 			];
 			return view('stock.delivery.entry.edit',$data);
+		}else{
+			return redirect()->back();
+		}
+	}
+
+	public function makeDelivery(Request $request, $id){
+		$id = $id;
+		$obj = Order::find($id);
+		if($obj){
+			$data = [
+				'title'			=> trans('lang.delivery'),
+				'icon'			=> 'fa fa-edit',
+				'small_title'	=> trans('lang.edit'),
+				'background'	=> '',
+				'link'			=> [
+					'home'	=> [
+							'url' 		=> url('/'),
+							'caption' 	=> trans('lang.home'),
+					],
+					'index'	=> [
+							'url' 		=> url('stock/deliv'),
+							'caption' 	=> trans('lang.delivery'),
+					],
+					'edit'	=> [
+							'caption' 	=> trans('lang.edit'),
+					],
+				],
+				'rounteSave'	=> url('stock/deliv/save'),		
+				'rounteBack'	=> url('stock/deliv'),		
+				'obj'	=> $obj,
+			];
+			return view('stock.delivery.entry.make_delivery',$data);
 		}else{
 			return redirect()->back();
 		}
@@ -255,15 +289,15 @@ class DeliveryController extends Controller
 			'supplier' 		=>'required|max:11',
 			'po_no' 		=>'required|max:11',
 		];
-		if(count($request['line_index']) > 0){
-			for($i=0;$i<count($request['line_index']);$i++){
-				$rules['line_index.'.$i]		= 'required';
-				$rules['line_item.'.$i]			= 'required|max:11';
-				$rules['line_unit.'.$i]			= 'required';
-				$rules['line_qty.'.$i]			= 'required';
-				$rules['line_warehouse.'.$i]	= 'required|max:11';
-			}
-		}
+		// if(count($request['line_index']) > 0){
+		// 	for($i=0;$i<count($request['line_index']);$i++){
+		// 		$rules['line_index.'.$i]		= 'required';
+		// 		$rules['line_item.'.$i]			= 'required|max:11';
+		// 		$rules['line_unit.'.$i]			= 'required';
+		// 		$rules['line_qty.'.$i]			= 'required';
+		// 		$rules['line_warehouse.'.$i]	= 'required|max:11';
+		// 	}
+		// }
         Validator::make($request->all(),$rules)->validate();
 		try {
 			DB::beginTransaction();
@@ -286,21 +320,23 @@ class DeliveryController extends Controller
 			}
 
 			if(!$id = DB::table('deliveries')->insertGetId($data)){
+				print_r(new \Exception("Stock In not insert."));exit;
 				throw new \Exception("Delivery[{$request->reference_no}] not create.");
 			}
-			
+			// print_r(count($request['line_index']));exit;
 			if(count($request['line_index']) > 0){
 				for($i=0;$i<count($request['line_index']);$i++){
-
+					// $costArr = getItemCost($request['line_item'][$i],$request['line_unit'][$i],$request['line_qty'][$i],$request['line_cost'][$i]);
 					$detail = [
-						'del_id'         =>$id,
-						'warehouse_id'   =>$request['line_warehouse'][$i],
-						'line_no'        =>$request['line_index'][$i],
-						'item_id'        =>$request['line_item'][$i],
-						'unit'           =>$request['line_unit'][$i],
-						'qty'            =>$request['line_qty'][$i],
-						'price'          =>$request['line_price'][$i],
-						'desc'           =>$request['line_reference'][$i]
+						'del_id'         		=>	$id,
+						'warehouse_id'   		=>	$request['line_warehouse'][$i],
+						'line_no'        		=>	$request['line_index'][$i],
+						'item_id'        		=>	$request['line_item'][$i],
+						'unit'           		=>	$request['line_unit'][$i],
+						'qty'            		=>	$request['line_qty'][$i],
+						'price'          		=>	$request['line_cost'][$i],
+						'desc'           		=>	$request['line_reference'][$i],
+						'order_qty'		 		=>	$request['order_qty'][$i]
 					];
 
 					$stockIn = [
@@ -310,9 +346,9 @@ class DeliveryController extends Controller
 						'ref_type'       =>'stock delivery',
 						'line_no'        =>$request['line_index'][$i],
 						'item_id'        =>$request['line_item'][$i],
-						'unit'           =>$request['line_unit'][$i],
-						'qty'            =>$request['line_qty'][$i],
-						'remain_qty'            =>$request['line_qty'][$i],
+						// 'unit'           =>$request['line_unit'][$i],
+						// 'qty'            =>$request['line_qty'][$i],
+						// 'remain_qty'            =>$request['line_qty'][$i],
 						'warehouse_id'   =>$request['line_warehouse'][$i],
 						'trans_date'     =>$trans_date,
 						'trans_ref'      =>'I',
@@ -321,25 +357,39 @@ class DeliveryController extends Controller
 						'created_by'     =>Auth::user()->id,
 						'created_at'     =>date('Y-m-d H:i:s'),
 					];
-
 					if (getSetting()->is_costing==1) {
 						if ($request['line_cost'][$i]) {
-							$qty    = (float)$request['line_qty'][$i];
-							$cost   = (float)$request['line_cost'][$i];
-							$amount = $qty * $cost;
-							$stockIn = array_merge($stockIn,['cost' => $cost]);
-							$stockIn = array_merge($stockIn,['amount' => $amount]);
+							$costArr = getMinQTY($request['line_item'][$i],$request['line_unit'][$i],$request['line_qty'][$i],$request['line_cost'][$i]);
+							if ($costArr) {
+								$unit 	= $costArr['min_unit_to_code'];
+								$qty 	= $costArr['qty'];
+								$cost 	= $costArr['price'];
+								$amount = $qty * $cost;
+								$stockIn = array_merge($stockIn,['qty' => $qty]);
+								$stockIn = array_merge($stockIn,['remain_qty' => $qty]);
+								$stockIn = array_merge($stockIn,['unit' => $unit]);
+								$stockIn = array_merge($stockIn,['cost' => $cost]);
+								$stockIn = array_merge($stockIn,['amount' => $amount]);
+
+								$detail = array_merge($detail,['unit_converted'=>$unit]);
+								$detail = array_merge($detail,['qty_converted'=>$qty]);
+								$detail = array_merge($detail,['price_converted'=>$cost]);
+								$detail = array_merge($detail,['total_price_converted'=>$amount]);
+								
+							}
 						}
 					}
-
+					// print_r($stockIn);
 					// insert delivery items
 					if(!$deliveryItemId = DB::table('delivery_items')->insertGetId($detail)){
 						DB::rollback();
+						print_r(new \Exception("Stock In[{$i}] not insert."));exit;
 						throw new \Exception("DeliveryItem[{$i}] not insert.");
 					}
 					// insert stocks
 					if(!$stockInId = DB::table('stocks')->insertGetId($stockIn)){
 						DB::rollback();
+						print_r(new \Exception("Stock In[{$i}] not insert."));exit;
 						throw new \Exception("Stock In[{$i}] not insert.");
 					}
 					
@@ -372,11 +422,13 @@ class DeliveryController extends Controller
 					$new_qty = (floatval($stock_qty_deliv) / floatval($stock_qty_po)) + floatval($po_deliv_qty);
 					DB::table('order_items')->where(['po_id'=>$request->po_no,'line_no'=>$request['line_index'][$i],'item_id'=>$request['line_item'][$i]])->update(['deliv_qty'=>$new_qty]);
 				}
+				// exit;
 			}
 			DB::commit();
 			if($request->btnSubmit==1){
 				return redirect('stock/deliv')->with('success',trans('lang.save_success'));
 			}
+			print_r(new \Exception("Stock In not insert."));exit;
 			return redirect()->back()->with('success',trans('lang.save_success'));
 		} catch (\Exception $e) {
 			DB::rollback();
@@ -386,22 +438,22 @@ class DeliveryController extends Controller
 
     public function update(Request $request, $id)
     {
-		$rules = [
-			'reference_no' 	=>'required|max:20',
-			'trans_date' 	=>'required|max:20',
-			'supplier' 		=>'required|max:11',
-			'po_no' 		=>'required|max:11',
-		];
-		if(count($request['line_index']) > 0){
-			for($i=0;$i<count($request['line_index']);$i++){
-				$rules['line_index.'.$i]		= 'required';
-				$rules['line_item.'.$i]			= 'required|max:11';
-				$rules['line_unit.'.$i]			= 'required';
-				$rules['line_qty.'.$i]			= 'required';
-				$rules['line_warehouse.'.$i]	= 'required|max:11';
-			}
-		}
-        Validator::make($request->all(),$rules)->validate();
+		// $rules = [
+		// 	'reference_no' 	=>'required|max:20',
+		// 	'trans_date' 	=>'required|max:20',
+		// 	'supplier' 		=>'required|max:11',
+		// 	'po_no' 		=>'required|max:11',
+		// ];
+		// if(count($request['line_index']) > 0){
+		// 	for($i=0;$i<count($request['line_index']);$i++){
+		// 		$rules['line_index.'.$i]		= 'required';
+		// 		$rules['line_item.'.$i]			= 'required|max:11';
+		// 		$rules['line_unit.'.$i]			= 'required';
+		// 		$rules['line_qty.'.$i]			= 'required';
+		// 		$rules['line_warehouse.'.$i]	= 'required|max:11';
+		// 	}
+		// }
+        // Validator::make($request->all(),$rules)->validate();
 		try {
 			DB::beginTransaction();
 
@@ -442,7 +494,6 @@ class DeliveryController extends Controller
 			
 			if(count($request['line_index']) > 0){
 				for($i=0;$i<count($request['line_index']);$i++){
-
 					$detail = [
 						'del_id'         =>$id,
 						'warehouse_id'   =>$request['line_warehouse'][$i],
@@ -451,7 +502,8 @@ class DeliveryController extends Controller
 						'unit'           =>$request['line_unit'][$i],
 						'qty'            =>$request['line_qty'][$i],
 						'price'          =>$request['line_price'][$i],
-						'desc'           =>$request['line_reference'][$i]
+						'desc'           =>$request['line_reference'][$i],
+						'order_qty'		 =>$request['order_qty'][$i]
 					];
 
 					$stockIn = [
@@ -461,8 +513,8 @@ class DeliveryController extends Controller
 						'ref_type'       =>'stock delivery',
 						'line_no'        =>$request['line_index'][$i],
 						'item_id'        =>$request['line_item'][$i],
-						'unit'           =>$request['line_unit'][$i],
-						'qty'            =>$request['line_qty'][$i],
+						// 'unit'           =>$request['line_unit'][$i],
+						// 'qty'            =>$request['line_qty'][$i],
 						'warehouse_id'   =>$request['line_warehouse'][$i],
 						'trans_date'     =>$trans_date,
 						'trans_ref'      =>'I',
@@ -474,11 +526,24 @@ class DeliveryController extends Controller
 					
 					if (getSetting()->is_costing==1) {
 						if ($request['line_cost'][$i]) {
-							$qty = (float)$request['line_qty'][$i];
-							$cost = (float)$request['line_cost'][$i];
-							$amount = $qty * $cost;
-							$stockIn = array_merge($stockIn,['cost' => $cost]);
-							$stockIn = array_merge($stockIn,['amount' => $amount]);
+							$costArr = getMinQTY($request['line_item'][$i],$request['line_unit'][$i],$request['line_qty'][$i],$request['line_cost'][$i]);
+							if ($costArr) {
+								$unit 	= $costArr['min_unit_to_code'];
+								$qty 	= $costArr['qty'];
+								$cost 	= $costArr['price'];
+								$amount = $qty * $cost;
+								$stockIn = array_merge($stockIn,['qty' => $qty]);
+								$stockIn = array_merge($stockIn,['remain_qty' => $qty]);
+								$stockIn = array_merge($stockIn,['unit' => $unit]);
+								$stockIn = array_merge($stockIn,['cost' => $cost]);
+								$stockIn = array_merge($stockIn,['amount' => $amount]);
+
+								$detail = array_merge($detail,['unit_converted'=>$unit]);
+								$detail = array_merge($detail,['qty_converted'=>$qty]);
+								$detail = array_merge($detail,['price_converted'=>$cost]);
+								$detail = array_merge($detail,['total_price_converted'=>$amount]);
+								
+							}
 						}
 					}
 
@@ -540,6 +605,9 @@ class DeliveryController extends Controller
 			}
 
 			DB::commit();
+			if($request->btnSubmit==1){
+				return redirect('stock/deliv')->with('success',trans('lang.save_success'));
+			}
 			return redirect()->back()->with('success',trans('lang.update_success'));
 		} catch (\Exception $e) {
 			DB::rollback();

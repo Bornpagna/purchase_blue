@@ -37,6 +37,6 @@ class CreateFormatHousesTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('houses');
+        // Schema::dropIfExists('houses');
     }
 }

@@ -36,6 +36,10 @@
 							<i class="fa fa-plus"></i>
 						</a>
 					@endif
+
+					{{-- <a title="{{trans('lang.update')}}" href="{{$rounteUpdateQty}}" class="btn btn-circle btn-icon-only btn-default" id="updateQty">
+						<i class="icon-cloud-upload"></i>
+					</a> --}}
 				</div>
 			</div>
 			<div class="portlet-body">

@@ -40,7 +40,8 @@ class ZoneController extends Controller
 						'caption' 	=> trans('lang.zone'),
 					],
 			],
-			'rounte'		=> url("zone/dt")
+			'rounte'		=> url("zone/dt"),
+			'types'			=> ''
 		];
 		
 		if(hasRole('zone_add')){

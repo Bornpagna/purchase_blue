@@ -5,6 +5,13 @@
 	.btnAdd{
 		cursor: pointer;
 	}
+	#table-income tbody tr td{
+		vertical-align: middle;
+		
+	}
+	#table-income tbody tr td.center{
+		text-align: center;
+	}
 </style>
 <div class="row">
 	<div class="col-md-12">
@@ -73,6 +80,17 @@
 												</div>
 											</div>
 											<div class="form-group">
+												<label for="building_id" class="col-md-4 control-label"><strong>{{ trans('lang.building') }}</strong></label>
+												<div class="col-md-8">
+													<select class="form-control building_id" onchange="onChangeBuilding(this)" name="building_id">
+														<option value=""></option>
+														{{getSystemData("BD")}}
+													</select>
+													<span class="help-block font-red bold"></span>
+												</div>
+											</div>
+
+											{{-- <div class="form-group">
 												<label for="street_id" class="col-md-4 control-label"><strong>{{ trans('lang.street') }}</strong></label>
 												<div class="col-md-8">
 													<select class="form-control street_id" onchange="onChangeStreet(this)" name="street_id">
@@ -81,7 +99,7 @@
 													</select>
 													<span class="help-block font-red bold"></span>
 												</div>
-											</div>
+											</div> --}}
 											<div class="form-group">
 												<label for="house_id" class="col-md-4 control-label"><strong>{{ trans('lang.house_no') }}</strong></label>
 												<div class="col-md-8">
@@ -188,10 +206,12 @@
 								<thead>
 									<tr style="font-size:12px;">
 										<th width="5%" class="text-center all">{{ trans('lang.line_no') }}</th>
-										<th width="30%" class="text-center all">{{ trans('lang.items') }}</th>
-										<th width="15" class="text-center all">{{ trans('lang.units') }}</th>
+										<th width="15%" class="text-center all">{{ trans('lang.items') }}</th>
+										<th width="10%" class="text-center all">{{ trans('lang.units') }}</th>
+										<th width="15%" class="text-center all">{{ trans('lang.qty_in_stock') }}</th>
+										<th width="15%" class="text-center all">{{ trans('lang.remain_qty') }}</th>
 										<th width="15%" class="text-center all">{{ trans('lang.qty') }}</th>
-										<th width="25%" class="text-center all">{{ trans('lang.note') }}</th>
+										<th width="15%" class="text-center all">{{ trans('lang.note') }}</th>
 										<th width="5%" class="text-center all"><i class='fa fa-plus btnAdd' id="btnAdd"></i></th>
 									</tr>
 								</thead>
@@ -229,8 +249,12 @@
 		return $.ajax({url:'{{url("/stock/use/GetItem")}}',type:'GET',dataType:'json',data:{q:query},async:false}).responseJSON;
 	}
 
-	function GetHouse(street_id) {
-		return $.ajax({url:'{{url("/stock/use/GetHouse")}}',type:'GET',dataType:'json',data:{id:street_id},async:false}).responseJSON;
+	// function GetHouse(street_id) {
+	// 	return $.ajax({url:'{{url("/stock/use/GetHouse")}}',type:'GET',dataType:'json',data:{id:street_id},async:false}).responseJSON;
+	// }
+
+	function GetHouse(building_id){
+		return $.ajax({url:'{{url("/repository/getHousesByAllTrigger")}}',type:'GET',dataType:'json',data:{building_id:building_id},async:false}).responseJSON;
 	}
 
 	function GetStreet(query) {
@@ -336,12 +360,18 @@
 
 	$('#save_close,#save_new').on('click',function(){
 		$(this).prop('disabled', true);
-		if(chkValid([".reference_no",".trans_date",".reference",".trans_desc",".house_id",".street_id",".line_item",".line_unit",".line_use_qty",<?php if(getSetting()->usage_constructor==1){echo '".sub_const",';} ?>".engineer"])){
-			if(isSave()){
-				objRef = GetRef();
-				if (chkReference(objRef, '#reference')) {
-					$("#btnSubmit").val($(this).val());
-					$('#form-stock-entry').submit();
+		var errorClass =$("input[class*='error-qty']");
+		if(errorClass.length == 0){
+			if(chkValid([".reference_no",".trans_date",".reference",".trans_desc",".house_id",".building_id",".line_item",".line_unit",".line_use_qty",".sub_const",".engineer"])){
+				if(isSave()){
+					objRef = GetRef();
+					if (chkReference(objRef, '#reference')) {
+						$("#btnSubmit").val($(this).val());
+						$('#form-stock-entry').submit();
+					}else{
+						$(this).prop('disabled', false);
+						return false;
+					}
 				}else{
 					$(this).prop('disabled', false);
 					return false;
@@ -352,7 +382,7 @@
 			}
 		}else{
 			$(this).prop('disabled', false);
-			return false;
+				return false;
 		}
 	});
 	
@@ -361,6 +391,19 @@
 		if(val!=null && val!=''){
 			$("#table-income tbody").empty();
 			$('#btnAdd').trigger('click');
+		}
+	}
+
+	function onChangeBuilding(field){
+		var val = $(field).val();
+		jsonHouse = GetHouse(val);
+		if(val!=null && val!='' && jsonHouse){
+			$('.house_id').empty();
+			$('.house_id').append($('<option></option>').val('').text(''));
+			$('.house_id').select2('val', null);
+			$.each(jsonHouse.filter(c=>c.building_id == val), function(key ,value){
+				$('.house_id').append($('<option></option>').val(value.id).text(value.house_no));
+			});
 		}
 	}
 	
@@ -420,11 +463,25 @@
 					'trans_date':trans_date,
 				},
 				success:function(data){
-					$('.line_stock_qty_'+row).val(data.stock_qty);
-					$('.line_boq_set_'+row).val(data.boq_set);
+					var stock_qty = parseFloat(data.stock_qty);
+					var boq_qty = parseFloat(data.boq_set);
+					var remain_qty = parseFloat(data.remain_boq);
+					var stock_sty_with_unit = stock_qty.toFixed(4) +" | "+ unit;
+					var remain_boq_qty_with_unit = remain_qty.toFixed(4) + " | " + unit;
+					if(data.boq_set == -1){
+                        var boq_qty_with_unit = "Boq not set";
+					}else{
+						var boq_qty_with_unit = boq_qty.toFixed(4) + unit;
+					}
+					$('.line_stock_qty_'+row).val(stock_qty);
+					$('.line_boq_set_'+row).val(boq_qty);
+					$('.label_qty_stock_'+row).html(stock_sty_with_unit);
+					$('.label_qty_remain_'+row).html(remain_boq_qty_with_unit);
 				},error:function(){
 					$('.line_stock_qty_'+row).val(0);
 					$('.line_boq_set_'+row).val(0);
+					$('.label_qty_stock_'+row).html(0);
+					$('.label_qty_remain_'+row).html(0);
 					console.log('error get qty stock.');
 				}
 			});
@@ -441,33 +498,38 @@
 			if(parseFloat(boq_set) == -1){
 				if(parseFloat(use_qty) > parseFloat(stock_qty)){
 					$(field).css('border','1px solid #e43a45');
+					$(field).addClass("error-boq");
 					$(".show-message-error").html('{{trans("lang.greater_than_stock_qty")}}!');
 				}else{
 					$(field).css('border','1px solid #c2cad8');
 					$(".show-message-error").empty();
+					$(field).removeClass("error-boq");
 				}
 			}else{
 				if(parseFloat(use_qty) > parseFloat(boq_set)){
 					$(field).css('border','1px solid #e43a45');
+					$(field).addClass("error-boq");
 					$(".show-message-error").html('{{trans("lang.greater_than_boq_qty")}}!');
 				}else if(parseFloat(use_qty) > parseFloat(stock_qty)){
+					$(field).addClass("error");
 					$(field).css('border','1px solid #e43a45');
 					$(".show-message-error").html('{{trans("lang.greater_than_stock_qty")}}!');
 				}else{
+					$(field).removeClass("error-boq");
 					$(field).css('border','1px solid #c2cad8');
 					$(".show-message-error").empty();
 				}
 			}
 		}else{
+			$(field).removeClass("error-boq");
 			$(field).css('border','1px solid #c2cad8');
 			$(".show-message-error").empty();
 		}
 	}
 
 	$("#btnAdd").on('click',function(){
-
 		var house = $('.house_id').val();
-		var street = $('.street_id').val();
+		var street = $('.building_id').val();
 		var warehouse = $('.warehouse_id').val();
 		if (house!=null && house!='' && street!=null && street!='' && warehouse!=null && warehouse!='') {
 			$('#row-default').remove();
@@ -490,6 +552,8 @@
 						'		<option value=""></option>'+
 						'	</select>'+
 						'</td>'+
+						'<td class="center"><span class="center label_qty_stock_'+i+'"></span></td>'+
+						'<td  class="center"><span class="center label_qty_remain_'+i+'"></span></td>'+
 						'<td>'+
 						'	<input type="number" length="50" step="any" class="noscroll form-control line_use_qty line_use_qty_'+i+'" name="line_use_qty[]" onkeyup="enterQtyUsage(this, '+i+')" />'+
 						'	<input type="hidden" class="form-control line_stock_qty line_stock_qty_'+i+'" name="line_stock_qty[]"/>'+
@@ -542,7 +606,7 @@
 			}
 		}else{
 			$("#table-income tbody").empty();
-			$("#table-income tbody").append('<tr id="row-default"><td colspan="6" style="text-align: center;font-weight: 600;">Please select house number and warehouse first</td></tr>');
+			$("#table-income tbody").append('<tr id="row-default"><td colspan="8" style="text-align: center;font-weight: 600;">Please select house number and warehouse first</td></tr>');
 		}
 	});
 	
@@ -704,7 +768,7 @@
 	
 	$(document).ready(function(){
 		$.fn.select2.defaults.set("theme", "classic");
-		$(".engineer, .sub_const, .warehouse_id, .street_id, .house_id").select2({placeholder:'{{trans("lang.please_choose")}}',width:'100%',allowClear:'true'});
+		$(".engineer, .sub_const, .warehouse_id, .building_id, .house_id").select2({placeholder:'{{trans("lang.please_choose")}}',width:'100%',allowClear:'true'});
 		$('#trans_date').val(formatDate("{{date('Y-m-d')}}"));
 		$("#trans_date").datepicker({
 			format: "{{getSetting()->format_date}}",
@@ -712,7 +776,7 @@
             pickerPosition: "bottom-right"
 		});
 
-		$('#trans_date, .street_id, .house_id, warehouse_id').on('change', function(){
+		$('#trans_date, .building_id, .house_id, warehouse_id').on('change', function(){
 			$('.line_boq_set, .line_stock_qty, .line_use_qty, .line_note').val('');
 
 			$('.line_unit').each(function(){

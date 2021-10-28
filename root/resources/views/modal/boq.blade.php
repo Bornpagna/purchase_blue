@@ -45,7 +45,7 @@
 										<span class="required">*</span>
 									</label>
 									<div class="col-md-12">
-										<select name="zone_id" id="boq-zone" class="form-control boq-zone my-select2">
+										<select name="zone_id" id="boq-zone" class="form-control boq-zone-add my-select2">
 											<option value=""></option>
 											{{getSystemData('ZN')}}
 										</select>
@@ -60,7 +60,7 @@
 										<span class="required">*</span>
 									</label>
 									<div class="col-md-12">
-										<select name="block_id" id="boq-block" class="form-control boq-block my-select2">
+										<select name="block_id" id="boq-block" class="form-control boq-block-add my-select2">
 											<option value=""></option>
 											{{getSystemData('BK')}}
 										</select>
@@ -74,7 +74,7 @@
 										<span class="required">*</span>
 									</label>
 									<div class="col-md-12">
-										<select name="building_id" id="boq-building" class="form-control boq-building my-select2">
+										<select name="building_id[]" id="boq-building" class="form-control boq-building-add my-select2" multiple>
 											<option value=""></option>
 											{{getSystemData('BD')}}
 										</select>
@@ -90,7 +90,7 @@
 										{{-- <span class="required">*</span> --}}
 									</label>
 									<div class="col-md-12">
-										<select name="street_id" id="boq-street" class="form-control boq-street my-select2">
+										<select name="street_id" id="boq-street" class="form-control boq-street-add my-select2">
 											<option value=""></option>
 											{{getSystemData('ST')}}
 										</select>
@@ -104,7 +104,7 @@
 										{{-- <span class="required">*</span> --}}
 									</label>
 									<div class="col-md-12">
-										<select name="house_type_id[]" id="boq-house-type" class="form-control boq-house-type my-select2">
+										<select name="house_type_id" id="boq-house-type" class="form-control boq-house-type-add my-select2">
 											<option value=""></option>
 											{{getSystemData('HT')}}
 										</select>
@@ -118,10 +118,17 @@
 										{{-- <span class="required">*</span> --}}
 									</label>
 									<div class="col-md-12 boq-house-wrapper">
-										<select name="house[]" id="boq-house" class="form-control boq-house my-select2" multiple>
-										
-										</select>
-										<span class="help-block font-red bold"></span>
+										<div class="row">
+											<div class="col-md-9">
+											<select name="house[]" id="boq-house" class="form-control boq-house-add my-select2" multiple>
+											
+											</select>
+											<span class="help-block font-red bold"></span>
+											</div>
+											<div class="col-md-3">
+												<label class="checkbox-inline"><input type="checkbox" id="checkbox-house" value="">Select All</label>
+											</div>
+										</div>
 									</div>
 								</div>
 							</div>
@@ -164,7 +171,7 @@
 										<span class="required">*</span>
 									</label>
 									<div class="col-md-8">
-										<select name="working_type" id="boq-working-type" class="form-control boq-working-type my-select2">
+										<select name="working_type" id="boq-working-type" class="form-control boq-working-type-add my-select2">
 											<option value=""></option>
 											{{getSystemData('WK')}}
 										</select>
@@ -179,14 +186,14 @@
 						<table class="table table-hover no-footer" id="table_boq">
 							<thead>
 								<tr>
-									<th class="text-center all" width="5%">{{ trans('lang.no') }}</th>
-									<th class="text-center all">{{ trans('lang.item_type') }}</th>
-									<th class="text-center all">{{ trans('lang.items') }}</th>
-									<th class="text-center all">{{ trans('lang.uom') }}</th>
-									<th class="text-center all">{{ trans('lang.qty_std') }}</th>
-									<th class="text-center all">{{ trans('lang.qty_add') }}</th>
-									<th class="text-center all">{{ trans('lang.cost') }}</th>
-									<th class="text-center all"><i class='fa fa-plus boq-pointer'></i></th>
+									<th class="text-center all" width="2%">{{ trans('lang.no') }}</th>
+									<th class="text-center all" width="15%">{{ trans('lang.item_type') }}</th>
+									<th class="text-center all" width="15%">{{ trans('lang.items') }}</th>
+									<th class="text-center all" width="10%">{{ trans('lang.uom') }}</th>
+									<th class="text-center all" width="10%">{{ trans('lang.qty_std') }}</th>
+									<th class="text-center all" width="10%">{{ trans('lang.qty_add') }}</th>
+									<th class="text-center all" width="10%">{{ trans('lang.cost') }}</th>
+									<th class="text-center all" width="3%"><i class='fa fa-plus boq-pointer'></i></th>
 								</tr>
 							</thead>
 							<tbody>
@@ -196,7 +203,7 @@
 					</div>
 				</div>
 				<div class="modal-footer">
-					<button type="submit" class="btn btn-success boq-button-submit" value="1"></button>
+					<button type="button" class="btn btn-success boq-button-submit" value="1"></button>
 					<button type="button" class="btn btn-danger" data-dismiss="modal">{{trans('lang.cancel')}}</button>
 				</div>
 			</div>

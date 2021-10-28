@@ -62,16 +62,18 @@ class ApprovalOrderController extends Controller
 
 			$count_user_role = $this->getUserRole($row->role_id, $row->id);
 			// print_r($count_user_role[0]["condition"]);exit;
-			
-			if($count_user_role[0]["condition"] == "or"){
-				$finish = 1;
-			}else{
-				if(count($count_user_role) > 1){
-					$finish = 0;
-				}else{
+			if($count_user_role){
+				if($count_user_role[0]["condition"] == "or"){
 					$finish = 1;
+				}else{
+					if(count($count_user_role) > 1){
+						$finish = 0;
+					}else{
+						$finish = 1;
+					}
 				}
 			}
+			
 
 			if(!hasRole('approve_order_signature')){
 				$btnApprove = "disabled";

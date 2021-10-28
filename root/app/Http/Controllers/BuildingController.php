@@ -40,6 +40,7 @@ class BuildingController extends Controller
 				],
 			],			
 			'rounte'		=> url("building/dt"),
+			'types'			=>	''
 		];
 		
 		if(hasRole('building_add')){

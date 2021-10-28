@@ -42,6 +42,7 @@ class HouseTypeController extends Controller
 			],
 			'type'			=> self::SYSTEM_TYPE,				
 			'rounte'		=> url("housetype/dt"),
+			'types'			=> ''
 		];
 		
 		if(hasRole('item_type_add')){

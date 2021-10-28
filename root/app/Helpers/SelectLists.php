@@ -82,9 +82,65 @@ function getReferencePR($edit_id=NULL){
 		}
 	}
 }
+///////////////BOQ///////////////
+function getBOQNumber(){
+	$pro_id = Session::get('project');
+	$where = ['status'=>1];
+	$data = DB::table('boqs')->where($where)->get();
+	foreach($data as $row){
+		echo '<option value="'.$row->id.'">'.$row->boq_code.'</option>';
+	}
+}
 
 ////////////////////// unit stock ///////////////////////////////
-function getSystemData($type=NULL,$val=NULL){
+function getSystemData($type=NULL,$val=NULL,$parent_only=NULL){
+	$pro_id = Session::get('project');
+	$where = [
+		'status'=>'1'
+	];
+
+	if(($type) && ($type == "IT" || $type == "DP")){
+		$where = array_merge($where, ['type'=>$type]);
+	}else if($type){
+		$where = array_merge($where, ['type'=>$type,'parent_id'=>$pro_id]);
+	}
+	$parentDatas = DB::table('system_datas')->where($where)->where('parent',0)->get();
+	
+	foreach($parentDatas as $row){
+		if($parent_only){
+			if(strval($val) == strval($row->id)){
+				echo '<option value="'.$row->id.'" selected>'.$row->name.'</option>';
+			}else{ 
+				echo '<option value="'.$row->id.'">'.$row->name.'</option>';
+			}
+		}else{
+			$data = DB::table('system_datas')->where($where)->where('parent',$row->id)->get();
+			if(count($data) > 0){
+				echo '<optgroup label="'.$row->name.'">';
+					foreach($data as $key=>$child){
+						if(strval($val) == strval($child->id)){
+							echo '<option value="'.$child->id.'" selected>'.$child->name.'</option>';
+						}else{ 
+							echo '<option value="'.$child->id.'">'.$child->name.'</option>';
+						}
+					}
+				echo '</optgroup>';
+			}else{
+				if(strval($val) == strval($row->id)){
+					echo '<option value="'.$row->id.'" selected>'.$row->name.'</option>';
+				}else{ 
+					echo '<option value="'.$row->id.'">'.$row->name.'</option>';
+				}
+			}
+		}
+	}
+}
+function getSystemDatas($type=NULL,$zone=NULL,$block=Null,$building=Null,$street=Null,$house=Null){	
+	$pro_id = Session::get('project');
+	$data = DB::table('system_datas')->where('type',$type)->where('parent_id',$pro_id)->where('status','1')->get();
+	return $data;
+}
+function getSystemDataVal($type=NULL,$val=NULL){
 	$pro_id = Session::get('project');
 	$where = [
 		'status'=>'1'
@@ -94,16 +150,59 @@ function getSystemData($type=NULL,$val=NULL){
 	}else if($type){
 		$where = array_merge($where, ['type'=>$type,'parent_id'=>$pro_id]);
 	}
-	$data = DB::table('system_datas')->where($where)->select(['id','name'])->get();
+	$data = DB::table('system_datas')->where($where)->get();
 	foreach($data as $row){
-		if($val!=NULL && $val==$row->id){
+		if(($val) == ($row->id)){
 			echo '<option value="'.$row->id.'" selected>'.$row->name.'</option>';
-		}else{
+		}else{ 
 			echo '<option value="'.$row->id.'">'.$row->name.'</option>';
 		}
 	}
 }
-
+function getSystemDataName($type=NULL,$val=NULL){
+	$pro_id = Session::get('project');
+	$where = [
+		'status'=>'1'
+	];
+	if(($type) && ($type == "IT" || $type == "DP")){
+		$where = array_merge($where, ['type'=>$type]);
+	}else if($type){
+		$where = array_merge($where, ['type'=>$type,'parent_id'=>$pro_id]);
+	}
+	$data = DB::table('system_datas')->where($where)->get();
+	foreach($data as $row){
+		if(strval($val) == $row->name){
+			echo '<option value="'.$row->id.'" selected>'.$row->name.'</option>';
+		}else{ 
+			echo '<option value="'.$row->id.'">'.$row->name.'</option>';
+		}
+	}
+}
+function getHouseOption($val=NULL,$arr=NULL){
+	$where = [
+		'status'=>'1'
+	];
+	$data = DB::table('houses')->where($where)->get();
+	if(!empty($arr)){
+		foreach($data as $row){
+			$select = '';
+			foreach($arr as $sub_row){
+				if($sub_row==$row->id){
+					$select = 'selected';
+				}
+			}
+			echo '<option value="'.$row->id.'" '.$select.'>'.$row->house_no.'</option>';
+		}
+	}else{
+		foreach($data as $row){
+			if($val == $row->name){
+				echo '<option value="'.$row->id.'" selected>'.$row->house_no.'</option>';
+			}else{ 
+				echo '<option value="'.$row->id.'">'.$row->house_no.'</option>';
+			}
+		}
+	}	
+}
 ////////////////////// unit stock ///////////////////////////////
 function getUnitStock($val=NULL){
 	$data = DB::table('units')->where('status','1')->select(['to_code','to_desc'])->distinct('to_code')->get();
@@ -214,8 +313,12 @@ function getWarehouse($val=NULL){
 }
 
 ////////////////////// get items ///////////////////////////////
-function getItems($val=NULL){
-	$data = DB::table('items')->select('id','code','name','unit_stock')->where('status','1')->get();
+function getItems($val=NULL,$cat_id = null){
+	$where = ['status'=>1];
+	if($cat_id != null){
+		$where = array_merge($where,['cat_id'=>$cat_id]);
+	}
+	$data = DB::table('items')->select('id','code','name','unit_stock')->where($where)->get();
 	foreach($data as $row){
 		if($val!=NULL && $val==$row->id){
 			echo '<option val="'.$row->unit_stock.'" value="'.$row->id.'" selected>'.$row->code.'('.$row->name.')</option>';
@@ -224,7 +327,20 @@ function getItems($val=NULL){
 		}
 	}
 }
-
+function getItemName($val=NULL,$cat_id = null){
+	$where = ['status'=>1];
+	if($cat_id != null){
+		$where = array_merge($where,['cat_id'=>$cat_id]);
+	}
+	$data = DB::table('items')->select('id','code','name','unit_stock')->where($where)->get();
+	foreach($data as $row){
+		if($val!=NULL && $val==$row->name){
+			echo '<option val="'.$row->unit_stock.'" value="'.$row->id.'" selected>'.$row->code.'('.$row->name.')</option>';
+		}else{
+			echo '<option val="'.$row->unit_stock.'" value="'.$row->id.'">'.$row->code.' ('.$row->name.')</option>';
+		}
+	}
+}
 ////////////////////// get tax ///////////////////////////////
 function getConstructor($arr){
 	$arrCon = ['',trans('lang.engineer'),trans('lang.sub_const'),trans('lang.worker'),trans('lang.security'),trans('lang.driver')];

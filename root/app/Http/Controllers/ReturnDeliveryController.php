@@ -220,7 +220,7 @@ class ReturnDeliveryController extends Controller
 			$trans_date = date("Y-m-d", strtotime($originalDate));
 			$data = [
 				'pro_id'		=>$request->session()->get('project'),
-				'del_id'		=>$request->deliv_no,
+				'dep_id'		=>$request->deliv_no,
 				'sup_id'		=>$request->supplier,
 				'ref_no'		=>$request->reference_no,
 				'trans_date'	=>$trans_date,
@@ -273,7 +273,7 @@ class ReturnDeliveryController extends Controller
 						$itemId = $request['line_item'][$i];
 	
 						if(!$deliveryItem = DeliveryItem::where(['del_id'=> $request->deliv_no, 'item_id' => $itemId])->first()){
-							throw new \Exception("DeliveryItem[{$vitemId}] not found.");
+							throw new \Exception("DeliveryItem[{$itemId}] not found.");
 						}
 
 						$qty 	= (float)$request['line_qty'][$i] * -1;
@@ -282,6 +282,34 @@ class ReturnDeliveryController extends Controller
 
 						$stockOut = array_merge($stockOut,['cost'=>$cost]);
 						$stockOut = array_merge($stockOut,['amount'=>$amount]);
+					}
+
+					if (getSetting()->is_costing==1) {
+						$itemId = $request['line_item'][$i];
+	
+						if(!$deliveryItem = DeliveryItem::where(['del_id'=> $request->deliv_no, 'item_id' => $itemId])->first()){
+							throw new \Exception("DeliveryItem[{$itemId}] not found.");
+						}
+						if ($request['line_cost'][$i]) {
+							$costArr = getMinQTY($request['line_item'][$i],$request['line_unit'][$i],$request['line_qty'][$i],$deliveryItem->price);
+							if ($costArr) {
+								$unit 	= $costArr['min_unit_to_code'];
+								$qty 	= $costArr['qty'];
+								$cost 	= $costArr['price'];
+								$amount = $qty * $cost;
+								$stockOut = array_merge($stockOut,['qty' => $qty]);
+								$stockOut = array_merge($stockOut,['remain_qty' => $qty]);
+								$stockOut = array_merge($stockOut,['unit' => $unit]);
+								$stockOut = array_merge($stockOut,['cost' => $cost]);
+								$stockOut = array_merge($stockOut,['amount' => $amount]);
+
+								// $detail = array_merge($detail,['unit_converted'=>$unit]);
+								// $detail = array_merge($detail,['qty_converted'=>$qty]);
+								// $detail = array_merge($detail,['price_converted'=>$cost]);
+								// $detail = array_merge($detail,['total_price_converted'=>$amount]);
+								
+							}
+						}
 					}
 
 					// insert return delivery items
@@ -574,13 +602,18 @@ class ReturnDeliveryController extends Controller
     }
 	
 	function getItemStock(Request $request){
+		// print_r($request->ajax());
 		if($request->ajax()){
 			$warehouse_id = $request['warehouse_id'];
 			$item_id = $request['item_id'];
 			$unit = $request['unit'];
 			$stock_qty = 0;
+			$prefix = getSetting()->round_number;
+			$originalDate = $request['trans_date'];
+			$trans_date = date("Y-m-d", strtotime($originalDate));
 			$sql_stock = "SELECT (F.stock_qty / F.use_qty) AS stock_qty FROM (SELECT E.stock_qty, (SELECT pr_units.`factor` FROM pr_units WHERE pr_units.`from_code` = '$unit'AND pr_units.`to_code` = E.unit_stock) AS use_qty FROM (SELECT D.item_id, D.unit_stock, SUM(D.stock_qty) AS stock_qty FROM (SELECT C.item_id, C.unit_stock, (C.qty * C.stock_qty) AS stock_qty FROM (SELECT B.*, (SELECT pr_units.`factor` FROM pr_units WHERE pr_units.`from_code` = B.unit AND pr_units.`to_code` = B.unit_stock) AS stock_qty FROM (SELECT A.*, (SELECT pr_items.`unit_stock` FROM pr_items WHERE pr_items.`id` = A.item_id) AS unit_stock FROM (SELECT pr_stocks.`item_id`, pr_stocks.`unit`, pr_stocks.`qty` FROM pr_stocks WHERE pr_stocks.`item_id` = $item_id AND pr_stocks.`warehouse_id` = $warehouse_id AND pr_stocks.`delete` = 0) AS A) AS B) AS C) AS D GROUP BY D.item_id) AS E) AS F";
 			$objStock = collect(DB::select($sql_stock))->first();
+
 			if($objStock){
 				$stock_qty = floatval($objStock->stock_qty);
 			}

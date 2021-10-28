@@ -38,6 +38,7 @@
 				</div>
 				<form action="{{$rounteSave}}" method="POST" id="form-stock-entry" class="form-horizontal" enctype="multipart/form-data">
 					{{csrf_field()}}
+					<input type="hidden" name="btnSubmit" id="btnSubmit"/>
 					<div class="portlet-body" >
 						<div class="row">
 							<div class="col-md-6">
@@ -147,10 +148,11 @@
 										<th width="5%" class="text-center all">{{ trans('lang.line_no') }}</th>
 										<th width="20%" class="text-center all">{{ trans('lang.items') }}</th>
 										<th width="10%" class="text-center all">{{ trans('lang.units') }}</th>
-										<th width="10%" class="text-center all">{{ trans('lang.qty') }}</th>
-										@if(getSetting()->is_costing==1)
+										<th width="10%" class="text-center all">{{ trans('lang.ordered_qty') }}</th>
+										<th width="10%" class="text-center all">{{ trans('lang.recieve_qty') }}</th>
+										{{-- @if(getSetting()->is_costing==1)
 										<th width="10%" class="text-center all">{{ trans('lang.cost') }}</th>
-										@endif
+										@endif --}}
 										<th width="15%" class="text-center all">{{ trans('lang.to_warehouse') }}</th>
 										<th width="15%" class="text-center all">{{ trans('lang.remark') }}</th>
 									</tr>
@@ -229,6 +231,7 @@
 		$(this).prop('disabled', true);
 		if(chkValid([".reference_no",".trans_date",".supplier",".trans_desc",".po_no",".line_item",".line_unit",".line_qty",".line_warehouse",".line_cost"])){
 			if(isSave()){
+				$("#btnSubmit").val($(this).val());
 				$('#form-stock-entry').submit();
 			}else{
 				$(this).prop('disabled', false);
@@ -290,9 +293,7 @@
 	}
 
 	function initTable(data){
-
 		var str = "";
-
 			str += '<tr>';
 			str += '<td class="text-center all" style="vertical-align: middle !important;">';
 			str += '<input type="hidden" class="line_index line_index_'+data.id+'" name="line_index[]" value="'+data.line_no+'" />';
@@ -308,15 +309,18 @@
 			str += '</select>';
 			str += '</td>';
 			str += '<td>';
+				str += '<input type="text" name="order_qty[]" readonly value="'+data.qty+'" class="form-control line_qty_orig line_qty_orig_'+data.id+'"/>';
+			str += '</td>';
+			str += '<td>';
 			str += '<input type="number" value="'+data.qty+'" length="50" step="any" class="form-control noscroll line_qty line_qty_'+data.id+'" onkeyup="enterQty(this, '+data.id+')"  name="line_qty[]"/>';
 			str += '<input type="hidden" value="'+data.qty+'" class="line_qty_orig line_qty_orig_'+data.id+'"/>';
 			str += '<input type="hidden" value="'+data.price+'" name="line_price[]" class="line_price line_price_'+data.id+'"/>';
 			str += '</td>';
-			if (parseInt("{{getSetting()->is_costing}}")==1) {
-				str += '<td>';
-				str += '<input type="number" length="50" step="any" class="form-control noscroll line_cost line_cost_'+data.id+'" name="line_cost[]" value="'+data.cost+'"/>';
-				str += '</td>';
-			}
+			// if (parseInt("{{getSetting()->is_costing}}")==1) {
+			// 	str += '<td>';
+			// 	str += '<input type="number" length="50" step="any" class="form-control noscroll line_cost line_cost_'+data.id+'" name="line_cost[]" value="'+data.cost+'"/>';
+			// 	str += '</td>';
+			// }
 			str += '<td>';
 			str += '<select class="form-control line_warehouse line_warehouse_'+data.id+'" name="line_warehouse[]">';
 			str += '<option value=""></option>';

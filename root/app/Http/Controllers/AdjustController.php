@@ -13,6 +13,7 @@ use App\Model\StockAdjust;
 use App\Model\StockAdjustDetails;
 use App\Model\Item;
 use App\Model\Warehouse;
+use App\Model\Stock;
 
 class AdjustController extends Controller
 {
@@ -222,7 +223,8 @@ class AdjustController extends Controller
 
 			if(count($request['line_index']) > 0){
 				for($i=0;$i<count($request['line_index']);$i++){
-
+					$reqQTY = floatval($request['line_qty_adjust'][$i]);
+					$calQTY = $reqQTY ;
 					$detail = [
 						'adjust_id'      =>$id,
 						'warehouse_id'   =>$request['line_warehouse'][$i],
@@ -236,7 +238,7 @@ class AdjustController extends Controller
 						'created_by'     =>Auth::user()->id,
 						'created_at'     =>date('Y-m-d H:i:s'),
 					];
-
+					$defualCost = DB::table('items')->where('id',$request['line_item'][$i])->first();
 					$isStockOut = (floatval($request['line_qty_adjust'][$i]) < 0);
 					if (getSetting()->is_costing==1) {
 						$costArr = getItemCost($request['line_item'][$i],$request['line_unit'][$i],$request['line_qty_adjust'][$i]);
@@ -274,6 +276,31 @@ class AdjustController extends Controller
 									}
 								}
 							}
+						}else{
+							$stock = [
+								'pro_id'         =>	$request->session()->get('project'),
+								'ref_id'         =>	$id,
+								'ref_no'         =>	$request->reference_no,
+								'ref_type'       =>	'stock adjust',
+								'line_no'        =>	$request['line_index'][$i],
+								'item_id'        =>	$request['line_item'][$i],
+								'unit'           =>	$request['line_unit'][$i],
+								'qty'            =>	$request['line_qty_adjust'][$i],
+								'cost'           =>	$defualCost->cost_purch,
+								'amount'         =>	$request['line_qty_adjust'][$i] * $defualCost->cost_purch,
+								'warehouse_id'   =>	$request['line_warehouse'][$i],
+								'trans_date'     =>	$trans_date,
+								'reference'      =>	$request->reference,
+								'trans_ref'      => $isStockOut ? 'O' : 'I',
+								'alloc_ref'      =>	getAllocateRef($request->reference_no),
+								'created_by'     =>	Auth::user()->id,
+								'created_at'     =>	date('Y-m-d H:i:s'),
+							];
+							
+							if(!$stockID = DB::table('stocks')->insertGetId($stock)){
+								DB::rollback();
+								throw new \Exception("Stock out not insert.");
+							}
 						}
 					}else{
 
@@ -301,18 +328,138 @@ class AdjustController extends Controller
 						}
 					}
 
-					if(!$stockAdjustDetailsID = DB::table('stock_adjust_details')->insertGetId($detail)){
-						DB::rollback();
-						throw new \Exception("Stock adjust details not insert.");
-					}
+					// $stockOut = [
+					// 	'pro_id'         =>	$request->session()->get('project'),
+					// 	'ref_id'         =>	$id,
+					// 	'ref_no'         =>	$request->reference_no,
+					// 	'ref_type'       =>	'stock adjust',
+					// 	'line_no'        =>	$request['line_index'][$i],
+					// 	'item_id'        =>	$request['line_item'][$i],
+					// 	'unit'           =>	$request['line_unit'][$i],
+					// 	// 'qty'            =>	$isStockOut ? ($calQTY * -1) : $calQTY,
+					// 	// 'cost'           =>	$cost,
+					// 	// 'amount'         =>	$amount,
+					// 	'warehouse_id'   =>	$request['line_warehouse'][$i],
+					// 	'trans_date'     =>	$trans_date,
+					// 	'reference'      =>	$request->reference,
+					// 	'trans_ref'      => $isStockOut ? 'O' : 'I',
+					// 	'alloc_ref'      =>	getAllocateRef($request->reference_no),
+					// 	'created_by'     =>	Auth::user()->id,
+					// 	'created_at'     =>	date('Y-m-d H:i:s'),
+					// ];
+
+					// if (getSetting()->is_costing==1) {
+					// 	if (getSetting()->stock_account=="FIFO") {
+					// 		$sql  = "CALL COSTING_FIFO({$request->session()->get('project')},{$request['line_item'][$i]});";
+					// 	}else{
+					// 		$sql  = "CALL COSTING_LIFO({$request->session()->get('project')},{$request['line_item'][$i]});";
+					// 	}
+						
+					// 	$stocks = DB::select($sql);
+					// 	if(count($stocks) > 0){
+					// 		foreach($stocks as $key=>$stock){
+					// 			$qty =0;
+					// 			$remain_qty = 0;
+					// 			if($stock->type_ == "ADJ" ){
+					// 				if($key == 0){
+					// 					if($stock->remain_qty >= $calQTY){
+					// 						$remain_qty = $stock->remain_qty + $calQTY;
+					// 						$qty 	= $isStockOut ? ($calQTY * 1) : $calQTY;
+					// 						$cost 	= $stock->cost;
+					// 						$amount = $qty * $cost;
+					// 						$stockOut = array_merge($stockOut,['qty'    => $qty]);
+					// 						$stockOut = array_merge($stockOut,['cost'   => $cost]);
+					// 						$stockOut = array_merge($stockOut,['amount' => $amount]);
+
+					// 						// $detail = array_merge($detail,['qty'    => $qty]);
+					// 						// $detail = array_merge($detail,['total_cost'    => $amount]);
+					// 						// $detail = array_merge($detail,['cost' => $cost]);
+											
+					// 						$calQTY = 0;
+					// 					}else{
+					// 						$remain_qty = 0;
+					// 						$calQTYRemain = $calQTY - $stock->remain_qty; 
+
+					// 						$qty 	= $stock->remain_qty * -1;
+					// 						$cost 	= $stock->cost;
+					// 						$amount = $qty * $cost;
+					// 						$stockOut = array_merge($stockOut,['qty'    => $qty]);
+					// 						$stockOut = array_merge($stockOut,['cost'   => $cost]);
+					// 						$stockOut = array_merge($stockOut,['amount' => $amount]);
+
+					// 						// $detail = array_merge($detail,['qty'    => $qty]);
+					// 						// $detail = array_merge($detail,['total_cost'    => $amount]);
+					// 						// $detail = array_merge($detail,['cost' => $cost]);
+					// 						$calQTY = $calQTY - $stock->remain_qty;
+					// 					}
+										
+					// 					if(!$stockOutId = DB::table('stocks')->insertGetId($stockOut)){
+					// 						DB::rollback();
+					// 						print_r(2222);exit;
+					// 						throw new \Exception("Stock Out[{$i}] not insert.");
+					// 					}else{
+					// 						Stock::where('id',$stock->stock_id)->update(['remain_qty'=>$remain_qty]);
+					// 						if(!$stockAdjustDetailsID = DB::table('stock_adjust_details')->insertGetId($detail)){
+					// 							DB::rollback();
+					// 							throw new \Exception("Stock adjust details not insert.");
+					// 						}
+					// 					}
+					// 				}
+					// 			}
+					// 			else{
+					// 				if($key == 0){
+					// 					$qty 	= $isStockOut ? ($calQTY * 1) : $calQTY;
+					// 					$cost 	= $stock->cost;
+					// 					$amount = $qty * $cost;
+					// 					$stockOut = array_merge($stockOut,['qty'    => $qty]);
+					// 					$stockOut = array_merge($stockOut,['cost'   => $cost]);
+					// 					$stockOut = array_merge($stockOut,['amount' => $amount]);
+
+					// 					if(!$stockOutId = DB::table('stocks')->insertGetId($stockOut)){
+					// 						DB::rollback();
+					// 						throw new \Exception("Stock Out[{$i}] not insert.");
+					// 					}else{
+					// 						Stock::where('id',$stock->stock_id)->update(['remain_qty'=>$remain_qty]);
+					// 						if(!$stockAdjustDetailsID = DB::table('stock_adjust_details')->insertGetId($detail)){
+					// 							DB::rollback();
+					// 							throw new \Exception("Stock adjust details not insert.");
+					// 						}
+					// 					}
+					// 				}
+					// 			}
+					// 		}
+							
+					// 	}else{
+					// 		DB::rollback();
+					// 		// print_r(123);exit;
+					// 		throw new \Exception("Stock Out[{$i}] not insert.");
+					// 	}
+						
+					// }else{
+
+					// 	$stockOut = array_merge($stockOut,['qty'  => ($calQTY * (-1))]);
+					// 	if(!$stockOutId = DB::table('stocks')->insertGetId($stockOut)){
+					// 		DB::rollback();
+					// 		print_r(111);exit;
+					// 		throw new \Exception("Stock Out[{$i}] not insert.");
+					// 	}
+					// }
+
+					// if(!$stockAdjustDetailsID = DB::table('stock_adjust_details')->insertGetId($detail)){
+					// 	DB::rollback();
+					// 	throw new \Exception("Stock adjust details not insert.");
+					// }
 				}
 			}
-
+			if(!$stockAdjustDetailsID = DB::table('stock_adjust_details')->insertGetId($detail)){
+				DB::rollback();
+				throw new \Exception("Stock adjust details not insert.");
+			}
 			DB::commit();
 			if($request->btnSubmit==1){
 				return redirect('stock/adjust')->with('success',trans('lang.save_success'));
 			}
-			return redirect()->back()->with('success',trans('lang.save_success'));
+			// return redirect()->back()->with('success',trans('lang.save_success'));
 		} catch (\Exception $e) {
 			DB::rollback();
 			return redirect()->back()->with('error',trans('lang.save_error').' '.$e->getMessage().' '.$e->getLine());
@@ -508,5 +655,9 @@ class AdjustController extends Controller
 			}
 		}
 		return 0;
+	}
+
+	public function ImportAdjust(){
+		
 	}
 }
